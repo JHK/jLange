@@ -17,25 +17,26 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
 public class Server {
 
+    public static void main(String[] args) throws IOException {
+        Server proxy = new Server(8080);
+        proxy.start();
+        System.in.read();
+        proxy.stop();
+    }
+
     // to collect all channels for shut down
     private final ChannelGroup               allChannels;
-    private final Logger                     log = Logger.getLogger(Server.class.getName());
-    private final ChannelFactory             factory;
     private final ClientSocketChannelFactory clientFactory;
+    private final ChannelFactory             factory;
+    private final Logger                     log = Logger.getLogger(Server.class.getName());
+
     private final int                        port;
 
     public Server(int port) {
         this.port = port;
-        this.allChannels = new DefaultChannelGroup("server");
-        this.factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
-        this.clientFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
-    }
-
-    public void start() {
-        ServerBootstrap bootstrap = initServer();
-        Channel channel = bootstrap.bind(new InetSocketAddress(port));
-        allChannels.add(channel);
-        log.info("started on port " + port);
+        allChannels = new DefaultChannelGroup("server");
+        factory = new NioServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+        clientFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
 
     protected ServerBootstrap initServer() {
@@ -48,18 +49,18 @@ public class Server {
         return bootstrap;
     }
 
+    public void start() {
+        ServerBootstrap bootstrap = initServer();
+        Channel channel = bootstrap.bind(new InetSocketAddress(port));
+        allChannels.add(channel);
+        log.info("started on port " + port);
+    }
+
     public void stop() {
         ChannelGroupFuture future = allChannels.close();
         future.awaitUninterruptibly();
         clientFactory.releaseExternalResources();
         factory.releaseExternalResources();
         log.info("shutdown complete");
-    }
-
-    public static void main(String[] args) throws IOException {
-        Server proxy = new Server(8080);
-        proxy.start();
-        System.in.read();
-        proxy.stop();
     }
 }

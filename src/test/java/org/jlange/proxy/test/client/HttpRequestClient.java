@@ -21,9 +21,9 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public class HttpRequestClient {
 
-    private final Logger          log = Logger.getLogger(HttpRequestClient.class.getName());
-    private final ChannelFactory  factory;
     private final ClientBootstrap bootstrap;
+    private final ChannelFactory  factory;
+    private final Logger          log = Logger.getLogger(HttpRequestClient.class.getName());
 
     public HttpRequestClient() {
         factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
@@ -41,22 +41,6 @@ public class HttpRequestClient {
         this.request(request);
     }
 
-    public void request(HttpRequest request, String host, Integer port) throws MalformedURLException {
-        log.info("starting request to " + request.getUri());
-        bootstrap.setPipeline(getPipeline(request));
-        ChannelFuture connection = bootstrap.connect(new InetSocketAddress(host, port));
-        connection.awaitUninterruptibly();
-        connection.getChannel().getCloseFuture().awaitUninterruptibly();
-        factory.releaseExternalResources();
-        log.info("finished");
-    }
-
-    public void request(HttpRequest request) throws MalformedURLException {
-        URL url = new URL(request.getUri());
-
-        this.request(request, url.getHost(), url.getPort());
-    }
-
     protected ChannelPipeline getPipeline(HttpRequest request) {
         ChannelPipeline pipeline = Channels.pipeline();
 
@@ -65,5 +49,21 @@ public class HttpRequestClient {
         pipeline.addLast("HttpRequestHandler", new DebugHttpRequestHandler(request));
 
         return pipeline;
+    }
+
+    public void request(HttpRequest request) throws MalformedURLException {
+        URL url = new URL(request.getUri());
+
+        this.request(request, url.getHost(), url.getPort());
+    }
+
+    public void request(HttpRequest request, String host, Integer port) throws MalformedURLException {
+        log.info("starting request to " + request.getUri());
+        bootstrap.setPipeline(getPipeline(request));
+        ChannelFuture connection = bootstrap.connect(new InetSocketAddress(host, port));
+        connection.awaitUninterruptibly();
+        connection.getChannel().getCloseFuture().awaitUninterruptibly();
+        factory.releaseExternalResources();
+        log.info("finished");
     }
 }

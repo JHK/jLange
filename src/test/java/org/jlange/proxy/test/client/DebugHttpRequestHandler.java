@@ -11,7 +11,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 
 public class DebugHttpRequestHandler extends SimpleChannelHandler {
 
-    private HttpRequest request;
+    private final HttpRequest request;
 
     public DebugHttpRequestHandler(HttpRequest request) {
         this.request = request;

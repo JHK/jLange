@@ -13,8 +13,8 @@ import org.jlange.proxy.test.client.HttpRequestClient;
 
 public class Integration extends TestCase {
 
-    Server  proxy;
     Integer port = 8080;
+    Server  proxy;
 
     @Override
     protected void setUp() throws Exception {
@@ -42,16 +42,16 @@ public class Integration extends TestCase {
         client2.request(request, "localhost", port);
     }
 
-    public void testStaticHtml() throws MalformedURLException {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://backend:80/index.html");
+    public void testDynamicHtmlWithoutChunks() throws MalformedURLException {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://backend:80/mythweb/");
         request.setHeader("Host", "backend:80");
 
         HttpRequestClient client1 = new HttpRequestClient();
         client1.request(request, "localhost", port);
     }
 
-    public void testDynamicHtmlWithoutChunks() throws MalformedURLException {
-        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://backend:80/mythweb/");
+    public void testStaticHtml() throws MalformedURLException {
+        HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "http://backend:80/index.html");
         request.setHeader("Host", "backend:80");
 
         HttpRequestClient client1 = new HttpRequestClient();

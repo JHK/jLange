@@ -27,12 +27,32 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public class InboundHandler extends SimpleChannelUpstreamHandler {
 
-    private final Logger                     log = Logger.getLogger(InboundHandler.class.getName());
+    /**
+     * Closes the specified channel after all queued write requests are flushed.
+     */
+    static void closeOnFlush(Channel ch) {
+        if (ch.isConnected()) ch.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+    }
+
     private final ClientSocketChannelFactory clientFactory;
+    private final Logger                     log = Logger.getLogger(InboundHandler.class.getName());
+
     private volatile Channel                 outboundChannel;
 
     public InboundHandler(ClientSocketChannelFactory clientFactory) {
         this.clientFactory = clientFactory;
+    }
+
+    @Override
+    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+        log.info("channel closed");
+        if (outboundChannel != null) InboundHandler.closeOnFlush(outboundChannel);
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        e.getCause().printStackTrace();
+        InboundHandler.closeOnFlush(e.getChannel());
     }
 
     @Override
@@ -58,29 +78,7 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
                 HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
                 e.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
             }
-            closeOnFlush(outboundChannel);
-        }
-    }
-
-    @Override
-    public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        log.info("channel closed");
-        if (outboundChannel != null)
-            closeOnFlush(outboundChannel);
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        e.getCause().printStackTrace();
-        closeOnFlush(e.getChannel());
-    }
-
-    /**
-     * Closes the specified channel after all queued write requests are flushed.
-     */
-    static void closeOnFlush(Channel ch) {
-        if (ch.isConnected()) {
-            ch.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+            InboundHandler.closeOnFlush(outboundChannel);
         }
     }
 }

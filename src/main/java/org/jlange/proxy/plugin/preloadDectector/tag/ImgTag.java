@@ -7,10 +7,12 @@ import org.htmlparser.nodes.TagNode;
 
 public class ImgTag implements Tag {
 
+    @Override
     public String getTagName() {
         return "IMG";
     }
 
+    @Override
     public List<String> getUrls(TagNode tag) {
         List<String> urls = new LinkedList<String>();
 

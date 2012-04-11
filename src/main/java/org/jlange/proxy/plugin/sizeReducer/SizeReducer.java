@@ -7,12 +7,13 @@ import org.jlange.proxy.plugin.AbstractResponsePlugin;
 
 public class SizeReducer extends AbstractResponsePlugin {
 
-    private Logger log = Logger.getLogger("SizeReducer");
+    private final Logger log = Logger.getLogger("SizeReducer");
 
     public SizeReducer(HttpResponse response) {
         super(response);
     }
 
+    @Override
     public void run() {
         String html = getHtml();
 

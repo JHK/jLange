@@ -11,49 +11,45 @@ import org.jlange.proxy.plugin.preloadDectector.tag.Tag;
 
 public class TagFactory {
 
-	private Map<String, Tag> tagMap;
+    private static TagFactory instance;
 
-	private static TagFactory instance;
+    public static TagFactory instance() {
+        if (TagFactory.instance == null) TagFactory.instance = new TagFactory();
+        return TagFactory.instance;
+    }
 
-	private TagFactory() {
-		List<Tag> instanceTypes = new LinkedList<Tag>();
+    private final Map<String, Tag> tagMap;
 
-		instanceTypes.add(new ImgTag());
+    private TagFactory() {
+        List<Tag> instanceTypes = new LinkedList<Tag>();
 
-		tagMap = buildTagMap(instanceTypes);
-	}
+        instanceTypes.add(new ImgTag());
 
-	public static TagFactory instance() {
-		if (instance == null) {
-			instance = new TagFactory();
-		}
-		return instance;
-	}
+        tagMap = buildTagMap(instanceTypes);
+    }
 
-	// TODO: Use weights for link prefetching
-	// Some tags will be loaded for sure like IMG or linked CSS and JS in the
-	// header, so the weight can be 100%. There may be more than just these,
-	// like ANCHORS or sth. else where loading this link from the browser
-	// automatically or by the user has a probability between 0% and 100%. This
-	// threshold can be configured then.
-	// Be aware, prefetching ANCHORS can cause actions that are linked with
-	// these.
-	public List<String> getUrls(TagNode node) {
-		Tag tag = tagMap.get(node.getTagName());
-
-		List<String> urls = new LinkedList<String>();
-
-		if (tag != null)
-			urls = tag.getUrls(node);
-
-		return urls;
-	}
-
-	private Map<String, Tag> buildTagMap(
-			List<Tag> instanceTypes) {
-		Map<String, Tag> tagMap = new HashMap<String, Tag>();
-		for (Tag tag : instanceTypes)
-			tagMap.put(tag.getTagName(), tag);
+    private Map<String, Tag> buildTagMap(List<Tag> instanceTypes) {
+        Map<String, Tag> tagMap = new HashMap<String, Tag>();
+        for (Tag tag : instanceTypes)
+            tagMap.put(tag.getTagName(), tag);
         return tagMap;
+    }
+
+    // TODO: Use weights for link prefetching
+    // Some tags will be loaded for sure like IMG or linked CSS and JS in the
+    // header, so the weight can be 100%. There may be more than just these,
+    // like ANCHORS or sth. else where loading this link from the browser
+    // automatically or by the user has a probability between 0% and 100%. This
+    // threshold can be configured then.
+    // Be aware, prefetching ANCHORS can cause actions that are linked with
+    // these.
+    public List<String> getUrls(TagNode node) {
+        Tag tag = tagMap.get(node.getTagName());
+
+        List<String> urls = new LinkedList<String>();
+
+        if (tag != null) urls = tag.getUrls(node);
+
+        return urls;
     }
 }
