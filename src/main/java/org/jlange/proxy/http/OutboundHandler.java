@@ -30,7 +30,6 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        log.info(request.toString());
         e.getChannel().write(request);
         ctx.sendUpstream(e);
     }

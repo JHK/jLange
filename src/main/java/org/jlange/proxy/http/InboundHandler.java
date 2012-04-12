@@ -53,7 +53,8 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         HttpRequest request = (HttpRequest) e.getMessage();
-        log.info(request.toString());
+        log.info(request.getUri());
+        log.debug(request.toString());
 
         ClientBootstrap client = new ClientBootstrap(clientFactory);
         ChannelPipeline pipeline = client.getPipeline();
