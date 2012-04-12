@@ -50,13 +50,30 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e) {
         if (e.getMessage() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) e.getMessage();
-            log.info("Response\n" + response.toString());
-            inboundChannel.write(response);
-        }
-        else if (e.getMessage() instanceof HttpChunk) {
+
+            if (!response.isChunked()) {
+                log.info(response.getStatus().toString());
+                log.debug(response.toString());
+                inboundChannel.write(response);
+                Tools.closeOnFlush(inboundChannel);
+            } else {
+                response.setChunked(false);
+                if ("chunked".equals(response.getHeader("Transfer-Encoding")))
+                    response.removeHeader("Transfer-Encoding");
+                response.setContent(ChannelBuffers.dynamicBuffer());
+                this.response = response;
+            }
+        } else if (e.getMessage() instanceof HttpChunk) {
             HttpChunk chunk = (HttpChunk) e.getMessage();
-            log.info("Chunk\n" + chunk.toString());
-            // inboundChannel.write(chunk);
+            log.info("got a chunk");
+
+            this.response.getContent().writeBytes(chunk.getContent());
+            if (chunk.isLast()) {
+                log.info(response.getStatus().toString());
+                log.debug(response.toString());
+                inboundChannel.write(response);
+                Tools.closeOnFlush(inboundChannel);
+            }
         }
 
         // TODO optimize response
