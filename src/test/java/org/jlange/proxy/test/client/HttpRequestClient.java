@@ -4,7 +4,6 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
@@ -18,12 +17,14 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HttpRequestClient {
 
     private final ClientBootstrap bootstrap;
     private final ChannelFactory  factory;
-    private final Logger          log = Logger.getLogger(HttpRequestClient.class.getName());
+    private final Logger          log = LoggerFactory.getLogger(HttpRequestClient.class.getName());
 
     public HttpRequestClient() {
         factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());

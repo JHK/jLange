@@ -3,7 +3,6 @@ package org.jlange.proxy.http;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -14,6 +13,8 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Server {
 
@@ -28,7 +29,7 @@ public class Server {
     private final ChannelGroup               allChannels;
     private final ClientSocketChannelFactory clientFactory;
     private final ChannelFactory             factory;
-    private final Logger                     log = Logger.getLogger(Server.class.getName());
+    private final Logger                     log = LoggerFactory.getLogger(Server.class.getName());
 
     private final int                        port;
 

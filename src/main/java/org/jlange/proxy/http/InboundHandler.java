@@ -3,7 +3,6 @@ package org.jlange.proxy.http;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -24,11 +23,13 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.Tools;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InboundHandler extends SimpleChannelUpstreamHandler {
 
     private final ClientSocketChannelFactory clientFactory;
-    private final Logger                     log = Logger.getLogger(InboundHandler.class.getName());
+    private final Logger                     log = LoggerFactory.getLogger(InboundHandler.class.getName());
 
     private volatile Channel                 outboundChannel;
 

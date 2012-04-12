@@ -1,13 +1,13 @@
 package org.jlange.proxy.plugin.sizeReducer;
 
-import java.util.logging.Logger;
-
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.plugin.AbstractResponsePlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SizeReducer extends AbstractResponsePlugin {
 
-    private final Logger log = Logger.getLogger("SizeReducer");
+    private final Logger log = LoggerFactory.getLogger("SizeReducer");
 
     public SizeReducer(HttpResponse response) {
         super(response);

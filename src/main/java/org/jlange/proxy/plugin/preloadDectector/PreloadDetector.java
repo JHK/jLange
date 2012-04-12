@@ -2,7 +2,6 @@ package org.jlange.proxy.plugin.preloadDectector;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.htmlparser.Node;
 import org.htmlparser.Parser;
@@ -12,6 +11,8 @@ import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.plugin.AbstractResponsePlugin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PreloadDetector extends AbstractResponsePlugin {
 
@@ -33,7 +34,7 @@ public class PreloadDetector extends AbstractResponsePlugin {
         return urls;
     }
 
-    private final Logger log = Logger.getLogger("PreloadDetector");
+    private final Logger log = LoggerFactory.getLogger("PreloadDetector");
 
     public PreloadDetector(HttpResponse response) {
         super(response);

@@ -1,7 +1,9 @@
 package org.jlange.proxy.http;
 
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -16,11 +18,13 @@ import org.jlange.proxy.Tools;
 class OutboundHandler extends SimpleChannelUpstreamHandler {
 
     private final Channel     inboundChannel;
-    private final Logger      log = Logger.getLogger(OutboundHandler.class.getName());
+    private final Logger      log;
     private final HttpRequest request;
+    private HttpResponse      response;
 
     OutboundHandler(Channel inboundChannel, HttpRequest request) {
         this.inboundChannel = inboundChannel;
+        this.log = LoggerFactory.getLogger(OutboundHandler.class.getName());
         this.request = request;
     }
 
@@ -59,5 +63,4 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
         // TODO optimize response
 
     }
-
 }
