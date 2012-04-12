@@ -11,6 +11,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jlange.proxy.Tools;
 
 class OutboundHandler extends SimpleChannelUpstreamHandler {
 
@@ -33,13 +34,13 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         log.info("channel closed");
-        InboundHandler.closeOnFlush(inboundChannel);
+        Tools.closeOnFlush(inboundChannel);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
-        InboundHandler.closeOnFlush(e.getChannel());
+        Tools.closeOnFlush(e.getChannel());
     }
 
     @Override

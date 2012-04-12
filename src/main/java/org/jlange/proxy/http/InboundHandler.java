@@ -6,7 +6,6 @@ import java.net.URL;
 import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -24,15 +23,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.Tools;
 
 public class InboundHandler extends SimpleChannelUpstreamHandler {
-
-    /**
-     * Closes the specified channel after all queued write requests are flushed.
-     */
-    static void closeOnFlush(Channel ch) {
-        if (ch.isConnected()) ch.write(ChannelBuffers.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-    }
 
     private final ClientSocketChannelFactory clientFactory;
     private final Logger                     log = Logger.getLogger(InboundHandler.class.getName());
@@ -46,13 +39,14 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         log.info("channel closed");
-        if (outboundChannel != null) InboundHandler.closeOnFlush(outboundChannel);
+        if (outboundChannel != null)
+            Tools.closeOnFlush(outboundChannel);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         e.getCause().printStackTrace();
-        InboundHandler.closeOnFlush(e.getChannel());
+        Tools.closeOnFlush(e.getChannel());
     }
 
     @Override
@@ -71,14 +65,13 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
             ChannelFuture f = client.connect(new InetSocketAddress(url.getHost(), url.getPort() == -1 ? 80 : url.getPort()));
             outboundChannel = f.getChannel();
             f.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
-        }
-        catch (MalformedURLException e1) {
+        } catch (MalformedURLException e1) {
             e1.printStackTrace();
             if (e.getChannel().isConnected()) {
                 HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
                 e.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
             }
-            InboundHandler.closeOnFlush(outboundChannel);
+            Tools.closeOnFlush(outboundChannel);
         }
     }
 }
