@@ -16,6 +16,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.3.2</version>
 				<configuration>
 					<source>1.7</source>
 					<target>1.7</target>
@@ -28,12 +29,13 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty</artifactId>
 			<version>3.3.1.Final</version>
-			<scope>compile</scope>
 			<type>jar</type>
 		</dependency>
 		<dependency>
@@ -50,25 +52,19 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-math3</artifactId>
 			<version>3.0</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-java</artifactId>
 			<version>2.21.0</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-firefox-driver</artifactId>
 			<version>2.21.0</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>junit</groupId>
-				<artifactId>junit</artifactId>
-				<version>3.8.1</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 </project>
