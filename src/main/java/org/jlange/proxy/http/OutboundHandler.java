@@ -1,8 +1,5 @@
 package org.jlange.proxy.http;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -13,7 +10,10 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.Tools;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class OutboundHandler extends SimpleChannelUpstreamHandler {
 
@@ -50,11 +50,11 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     public void messageReceived(ChannelHandlerContext ctx, final MessageEvent e) {
         if (e.getMessage() instanceof HttpResponse) {
             HttpResponse response = (HttpResponse) e.getMessage();
+            log.info(response.getStatus().toString());
 
             if (!response.isChunked()) {
-                log.info(response.getStatus().toString());
                 log.debug(response.toString());
-                inboundChannel.write(response);
+                inboundChannel.write(optimize(response));
                 Tools.closeOnFlush(inboundChannel);
             } else {
                 response.setChunked(false);
@@ -70,13 +70,20 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
             this.response.getContent().writeBytes(chunk.getContent());
             if (chunk.isLast()) {
                 log.info(response.getStatus().toString());
-                log.debug(response.toString());
-                inboundChannel.write(response);
+                log.info(response.toString());
+                inboundChannel.write(optimize(response));
                 Tools.closeOnFlush(inboundChannel);
             }
         }
+    }
 
-        // TODO optimize response
+    private HttpResponse optimize(HttpResponse response) {
+        response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
+        // TODO check if the encoder already encodes it correctly
+        if ("text/html".equals(response.getHeader("Content-Type")))
+            response.setHeader("Content-Encoding", "gzip");
+
+        return response;
     }
 }
