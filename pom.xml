@@ -6,6 +6,9 @@
 	<artifactId>jLange</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
+	<scm>
+		<url>ssh://git@88.198.164.179/~/repos/jLange.git</url>
+	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
