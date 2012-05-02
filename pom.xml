@@ -9,7 +9,6 @@
 	<scm>
 	    <connection>scm:git:ssh://git@88.198.164.179/~/repos/jLange.git</connection>
 	    <developerConnection>scm:git:ssh://git@88.198.164.179/~/repos/jLange.git</developerConnection>
-		<tag>HEAD</tag>
 		<url>ssh://git@88.198.164.179/~/repos/jLange.git</url>
 	</scm>
 
