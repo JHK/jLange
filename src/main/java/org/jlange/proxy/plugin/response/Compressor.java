@@ -1,4 +1,4 @@
-package org.jlange.proxy.plugin.compressor;
+package org.jlange.proxy.plugin.response;
 
 import java.nio.charset.Charset;
 

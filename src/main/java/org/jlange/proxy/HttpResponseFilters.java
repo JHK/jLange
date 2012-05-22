@@ -4,7 +4,8 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.plugin.Benchmark;
 import org.jlange.proxy.plugin.ResponsePlugin;
-import org.jlange.proxy.plugin.compressor.Compressor;
+import org.jlange.proxy.plugin.response.Compressor;
+import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
 import org.littleshoot.proxy.HttpFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,7 @@ public class HttpResponseFilters implements org.littleshoot.proxy.HttpResponseFi
         private final Logger           log = LoggerFactory.getLogger(ResponseFilter.class);
 
         public ResponseFilter() {
-            responsePlugins = new ResponsePlugin[] { new Compressor() };
+            responsePlugins = new ResponsePlugin[] { new Compressor(), new ResponseHeaderOptimizer() };
         }
 
         @Override
