@@ -9,15 +9,19 @@ import org.htmlparser.nodes.TagNode;
 import org.htmlparser.util.NodeIterator;
 import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jlange.proxy.plugin.AbstractResponsePlugin;
+import org.jboss.netty.util.CharsetUtil;
+import org.jlange.proxy.plugin.ResponsePlugin;
+import org.jlange.proxy.plugin.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PreloadDetector extends AbstractResponsePlugin {
+public class PreloadDetector implements ResponsePlugin {
 
     private static List<String> getUrlsFromNodes(Node nextNode, List<String> urls) throws ParserException {
-        if (urls == null) urls = new LinkedList<String>();
+        if (urls == null)
+            urls = new LinkedList<String>();
 
         if (nextNode instanceof TagNode) {
             TagNode tag = (TagNode) nextNode;
@@ -27,8 +31,9 @@ public class PreloadDetector extends AbstractResponsePlugin {
 
             // traverse node tree recursive
             NodeList nl = tag.getChildren();
-            if (null != nl) for (NodeIterator i = nl.elements(); i.hasMoreNodes();)
-                PreloadDetector.getUrlsFromNodes(i.nextNode(), urls);
+            if (null != nl)
+                for (NodeIterator i = nl.elements(); i.hasMoreNodes();)
+                    PreloadDetector.getUrlsFromNodes(i.nextNode(), urls);
         }
 
         return urls;
@@ -36,32 +41,33 @@ public class PreloadDetector extends AbstractResponsePlugin {
 
     private final Logger log = LoggerFactory.getLogger("PreloadDetector");
 
-    public PreloadDetector(HttpResponse response) {
-        super(response);
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
+        return false;
     }
 
-    @Override
-    public void run() {
+    public void run(final HttpRequest request, final HttpResponse response) {
         List<String> urls = new LinkedList<String>();
 
-        String html = getHtml();
+        if (!Tools.isHtml(response))
+            return;
 
-        if (html != null) {
-            Parser p = new Parser();
-            try {
-                p.setInputHTML(html);
-                for (NodeIterator i = p.elements(); i.hasMoreNodes();)
-                    urls.addAll(PreloadDetector.getUrlsFromNodes(i.nextNode(), null));
-            }
-            catch (ParserException e) {
-                e.printStackTrace();
-            }
+        String html = response.getContent().toString(CharsetUtil.UTF_8);
+
+        Parser p = new Parser();
+        try {
+            p.setInputHTML(html);
+            for (NodeIterator i = p.elements(); i.hasMoreNodes();)
+                urls.addAll(PreloadDetector.getUrlsFromNodes(i.nextNode(), null));
+        } catch (ParserException e) {
+            e.printStackTrace();
         }
 
         // log urls that we have found
         for (String url : urls)
             log.info(url);
+    }
 
+    public void updateResponse(HttpResponse response) {
         // TODO: what to do with the urls?
     }
 }
