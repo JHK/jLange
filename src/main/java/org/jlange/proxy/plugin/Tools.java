@@ -66,7 +66,7 @@ public class Tools {
 
         if (contentType.contains("charset")) {
             try {
-                String charsetName = contentType.toUpperCase().replaceAll("\\w+/[\\w-]+\\s*?;\\s*?CHARSET=([\\w-]+);?", "$1");
+                String charsetName = contentType.toUpperCase().replaceAll("\\w+/[\\w-]+\\s*?;\\s*?CHARSET=([\\w-]+)\\s*?;?", "$1");
                 encoding = Charset.forName(charsetName);
             } catch (IllegalCharsetNameException e) {
                 log.error("Charset found but not applicable: " + contentType);
