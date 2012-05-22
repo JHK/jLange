@@ -36,6 +36,10 @@ public class Compressor implements ResponsePlugin {
             compressor.setGenerateStatistics(true);
     }
 
+    public Boolean filterResponses(HttpRequest request) {
+        return true;
+    }
+
     public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
         return HttpResponseStatus.OK.equals(response.getStatus()) && HttpHeaders.getContentLength(response) > 0
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));

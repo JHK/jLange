@@ -70,4 +70,10 @@ public class PreloadDetector implements ResponsePlugin {
     public void updateResponse(HttpResponse response) {
         // TODO: what to do with the urls?
     }
+
+    @Override
+    public Boolean filterResponses(HttpRequest request) {
+        // TODO Auto-generated method stub
+        return false;
+    }
 }

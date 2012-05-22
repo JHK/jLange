@@ -6,6 +6,14 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 public interface ResponsePlugin {
 
     /**
+     * Decides if the response will get filtered by investigating the request
+     * 
+     * @param request the request to investigate
+     * @return true if the response should get modified
+     */
+    public Boolean filterResponses(final HttpRequest request);
+
+    /**
      * Decides if the plugin is applicable for the given request and response
      * 
      * @param request {@link HttpRequest}

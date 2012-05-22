@@ -22,7 +22,13 @@ public class HttpResponseFilters implements org.littleshoot.proxy.HttpResponseFi
 
         @Override
         public boolean filterResponses(final HttpRequest request) {
-            return true;
+            boolean filter = false;
+
+            for (ResponsePlugin plugin : responsePlugins) {
+                filter = filter || plugin.filterResponses(request);
+            }
+
+            return filter;
         }
 
         @Override
