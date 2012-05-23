@@ -30,6 +30,7 @@ public class Compressor implements ResponsePlugin {
         compressor.setRemoveComments(true);
         compressor.setRemoveIntertagSpaces(true);
         compressor.setRemoveScriptAttributes(true);
+        compressor.setRemoveQuotes(true);
         compressor.setSimpleBooleanAttributes(true);
 
         if (log.isDebugEnabled())
