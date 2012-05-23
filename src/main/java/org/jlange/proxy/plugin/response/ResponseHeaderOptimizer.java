@@ -14,7 +14,7 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
     }
 
     public Boolean isApplicable(HttpRequest request, HttpResponse response) {
-        return response != null;
+        return response != null && !response.getHeaders().isEmpty();
     }
 
     public void run(HttpRequest request, HttpResponse response) {}
