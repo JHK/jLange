@@ -37,17 +37,17 @@ public class Compressor implements ResponsePlugin {
             compressor.setGenerateStatistics(true);
     }
 
-    public Boolean filterResponses(HttpRequest request) {
+    public Boolean isApplicable(final HttpRequest request) {
         return true;
     }
 
-    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
-        return HttpResponseStatus.OK.equals(response.getStatus()) && HttpHeaders.getContentLength(response) > 0
+    public Boolean isApplicable(final HttpResponse response) {
+        return HttpResponseStatus.OK.equals(response.getStatus())
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
     }
 
     public void run(final HttpRequest request, final HttpResponse response) {
-        if (!isApplicable(request, response))
+        if (!isApplicable(request) || !isApplicable(response))
             throw new RuntimeException("Plugin not applicable");
 
         encoding = Tools.getCharset(response);

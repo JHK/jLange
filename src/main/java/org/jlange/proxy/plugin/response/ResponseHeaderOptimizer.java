@@ -9,15 +9,17 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
 
     private final String[] removeableHeaders = new String[] { "P3P", "Server", "Via", "Generator" };
 
-    public Boolean filterResponses(HttpRequest request) {
+    public Boolean isApplicable(final HttpRequest request) {
         return true;
     }
 
-    public Boolean isApplicable(HttpRequest request, HttpResponse response) {
+    public Boolean isApplicable(final HttpResponse response) {
         return response != null && !response.getHeaders().isEmpty();
     }
 
-    public void run(HttpRequest request, HttpResponse response) {}
+    public void run(HttpRequest request, HttpResponse response) {
+
+    }
 
     public void updateResponse(HttpResponse response) {
         // remove all headers starting with "x-"
@@ -28,6 +30,10 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
         for (String header : removeableHeaders)
             if (HttpHeaders.getHeader(response, header) != null)
                 response.removeHeader(header);
-    }
 
+        // response.setHeader("Accept-Encoding", "gzip");
+        // response.setHeader("Content-Encoding", "gzip");
+        // response.removeHeader("Content-Length");
+        // response.setHeader("Content-Length", "1200");
+    }
 }

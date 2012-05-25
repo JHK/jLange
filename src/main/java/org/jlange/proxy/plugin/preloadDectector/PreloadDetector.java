@@ -41,7 +41,11 @@ public class PreloadDetector implements ResponsePlugin {
 
     private final Logger log = LoggerFactory.getLogger("PreloadDetector");
 
-    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
+    public Boolean isApplicable(final HttpRequest request) {
+        return false;
+    }
+    
+    public Boolean isApplicable(final HttpResponse response) {
         return false;
     }
 
@@ -69,11 +73,5 @@ public class PreloadDetector implements ResponsePlugin {
 
     public void updateResponse(HttpResponse response) {
         // TODO: what to do with the urls?
-    }
-
-    @Override
-    public Boolean filterResponses(HttpRequest request) {
-        // TODO Auto-generated method stub
-        return false;
     }
 }
