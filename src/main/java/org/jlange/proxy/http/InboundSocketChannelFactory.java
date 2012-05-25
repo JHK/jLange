@@ -33,7 +33,6 @@ public class InboundSocketChannelFactory extends NioServerSocketChannelFactory i
 
         allChannels.add(channel);
         channel.getCloseFuture().addListener(new ChannelFutureListener() {
-            @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 allChannels.remove(channel);
             }

@@ -34,7 +34,6 @@ public class OutboundSocketChannelFactory extends NioClientSocketChannelFactory 
 
         allChannels.add(channel);
         channel.getCloseFuture().addListener(new ChannelFutureListener() {
-            @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 allChannels.remove(channel);
             }
