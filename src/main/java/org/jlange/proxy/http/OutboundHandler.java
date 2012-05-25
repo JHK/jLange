@@ -2,14 +2,14 @@ package org.jlange.proxy.http;
 
 import java.util.List;
 
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.Tools;
@@ -20,11 +20,11 @@ import org.slf4j.LoggerFactory;
 
 class OutboundHandler extends SimpleChannelUpstreamHandler {
 
-    private final Logger                  log = LoggerFactory.getLogger(getClass());
-    private final Channel                 inboundChannel;
-    private final HttpRequest             request;
-    private volatile HttpResponse         response;
-    private volatile List<ResponsePlugin> responsePlugins;
+    private final Logger         log = LoggerFactory.getLogger(getClass());
+    private final Channel        inboundChannel;
+    private final HttpRequest    request;
+
+    private List<ResponsePlugin> responsePlugins;
 
     OutboundHandler(final Channel inboundChannel, final HttpRequest request) {
         this.inboundChannel = inboundChannel;
@@ -32,11 +32,8 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) {
-        log.info("Channel {} - bound, sending request to {}", e.getChannel().getId(), request.getUri());
-        e.getChannel().write(request);
-         responsePlugins = PluginProvider.getResponsePlugins(request);
-        ctx.sendUpstream(e);
+    public void channelBound(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
+        responsePlugins = PluginProvider.getResponsePlugins(request);
     }
 
     @Override
@@ -47,44 +44,17 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        System.err.println("Outbound Channel " + e.getChannel().getId() + " - " + e.getCause().getMessage());
+        // log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        e.getCause().printStackTrace();
         Tools.closeOnFlush(e.getChannel());
     }
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
-
-        if (e.getMessage() instanceof HttpResponse) {
-            HttpResponse response = (HttpResponse) e.getMessage();
-            log.info("Channel {} - response received - {}", e.getChannel().getId(), response.getStatus().toString());
-
-            if (!response.isChunked())
-                writeResponse(response);
-            else {
-                response.setChunked(false);
-                if ("chunked".equals(response.getHeader("Transfer-Encoding")))
-                    response.removeHeader("Transfer-Encoding");
-                response.setContent(ChannelBuffers.dynamicBuffer());
-                this.response = response;
-            }
-        } else if (e.getMessage() instanceof HttpChunk) {
-            HttpChunk chunk = (HttpChunk) e.getMessage();
-            log.info("Channel {} - response received - chunk", e.getChannel().getId());
-
-            this.response.getContent().writeBytes(chunk.getContent());
-            if (chunk.isLast())
-                writeResponse(response);
-        }
-    }
-
-    private void writeResponse(final HttpResponse response) {
-        log.info("Channel {} - sending response", inboundChannel.getId());
-        log.debug(response.toString());
-
-        if (!inboundChannel.isConnected()) {
-            log.error("Channel {} - not connected");
-            return;
-        }
+        final HttpResponse response = (HttpResponse) e.getMessage();
+        final Channel outboundChannel = e.getChannel();
+        log.info("Channel {} - response received - {}", outboundChannel.getId(), response.getStatus().toString());
 
         responsePlugins = PluginProvider.getResponsePlugins(responsePlugins, response);
         for (ResponsePlugin plugin : responsePlugins) {
@@ -93,8 +63,18 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
             plugin.updateResponse(response);
         }
 
+        // error handling for not connected inbound channel
+        if (!inboundChannel.isConnected()) {
+            log.error("Channel {} - inbound channel closed before sending response", inboundChannel.getId());
+            log.debug("Channel {} - {}", response.toString());
+            Tools.closeOnFlush(outboundChannel);
+            return;
+        }
+
+        // write response
+        log.info("Channel {} - sending response", inboundChannel.getId());
+        log.debug("Channel {} - {}", inboundChannel.getId(), response.toString());
         inboundChannel.write(response);
         log.info("Channel {} - sending response finished", inboundChannel.getId());
-        Tools.closeOnFlush(inboundChannel);
     }
 }
