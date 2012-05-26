@@ -14,10 +14,12 @@ public class OutboundPipelineFactory implements ChannelPipelineFactory {
 
     private final Channel inboundChannel;
     private final HttpRequest request;
+    private final OutboundChannelPool outboundChannelpool;
     
-    public OutboundPipelineFactory(final Channel inboundChannel, final HttpRequest request) {
+    public OutboundPipelineFactory(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
         this.inboundChannel = inboundChannel;
         this.request = request;
+        this.outboundChannelpool = outboundChannelPool;
     }
     
     public ChannelPipeline getPipeline() throws Exception {
@@ -27,7 +29,7 @@ public class OutboundPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("handler", new OutboundHandler(inboundChannel, request));
+        pipeline.addLast("handler", new OutboundHandler(inboundChannel, request, outboundChannelpool));
 
         return pipeline;
     }

@@ -10,18 +10,26 @@ import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
 
 public class PluginProvider {
 
-    public static List<ResponsePlugin> getResponsePlugins() {
-        final List<ResponsePlugin> plugins = new ArrayList<ResponsePlugin>();
+    private final static PluginProvider instance = new PluginProvider();
+
+    public static PluginProvider getInstance() {
+        return instance;
+    }
+
+    private final List<ResponsePlugin> plugins;
+
+    private PluginProvider() {
+        plugins = new ArrayList<ResponsePlugin>();
 
         plugins.add(new Compressor());
         plugins.add(new ResponseHeaderOptimizer());
+    }
 
+    public List<ResponsePlugin> getResponsePlugins() {
         return plugins;
     }
 
-    public static List<ResponsePlugin> getResponsePlugins(final HttpRequest request) {
-        final List<ResponsePlugin> plugins = getResponsePlugins();
-
+    public List<ResponsePlugin> getResponsePlugins(final HttpRequest request) {
         for (ResponsePlugin plugin : plugins)
             if (!plugin.isApplicable(request))
                 plugins.remove(plugin);
@@ -29,8 +37,8 @@ public class PluginProvider {
         return plugins;
     }
 
-    public static List<ResponsePlugin> getResponsePlugins(final List<ResponsePlugin> filteredPlugins, final HttpResponse response) {
-        final List<ResponsePlugin> plugins = filteredPlugins;
+    public List<ResponsePlugin> getResponsePlugins(final HttpRequest request, final HttpResponse response) {
+        final List<ResponsePlugin> plugins = getResponsePlugins(request);
 
         for (ResponsePlugin plugin : plugins)
             if (!plugin.isApplicable(response))

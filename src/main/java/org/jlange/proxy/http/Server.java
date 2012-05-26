@@ -18,21 +18,19 @@ public class Server {
         proxy.stop();
     }
 
-    private final InboundSocketChannelFactory  inboundFactory;
-    private final OutboundSocketChannelFactory outboundFactory;
-    private final Logger                       log = LoggerFactory.getLogger(getClass());
+    private final InboundSocketChannelFactory inboundFactory;
+    private final Logger                      log = LoggerFactory.getLogger(getClass());
 
-    private final int                          port;
+    private final int                         port;
 
     public Server(final int port) {
         this.port = port;
         inboundFactory = new InboundSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
-        outboundFactory = new OutboundSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
 
     public void start() {
         final ServerBootstrap inbound = new ServerBootstrap(inboundFactory);
-        inbound.setPipelineFactory(new InboundPipelineFactory(outboundFactory));
+        inbound.setPipelineFactory(new InboundPipelineFactory());
         inbound.setOption("child.tcpNoDelay", true);
         inbound.setOption("child.keepAlive", true);
 
@@ -44,10 +42,13 @@ public class Server {
 
     public void stop() {
         log.info("shutdown requested...");
+
         inboundFactory.getChannels().close().awaitUninterruptibly();
-        outboundFactory.getChannels().close().awaitUninterruptibly();
         inboundFactory.releaseExternalResources();
-        outboundFactory.releaseExternalResources();
+
+        OutboundChannelPool.getOutboundFactory().getChannels().close().awaitUninterruptibly();
+        OutboundChannelPool.getOutboundFactory().releaseExternalResources();
+
         log.info("shutdown complete");
     }
 }
