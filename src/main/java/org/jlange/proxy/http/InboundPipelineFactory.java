@@ -15,7 +15,7 @@ public class InboundPipelineFactory implements ChannelPipelineFactory {
 
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("deflater", new HttpContentCompressor());
+        pipeline.addLast("deflater", new HttpContentCompressor(9));
         pipeline.addLast("handler", new InboundHandler());
 
         return pipeline;
