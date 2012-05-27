@@ -8,7 +8,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.Tools;
@@ -37,14 +36,8 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     }
 
     @Override
-    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
+    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
         log.info("Outboundchannel {} - closed", e.getChannel().getId());
-
-        // if there is no channel left open for this request close the inbound connection
-        // FIXME: look for Proxy-Connection too
-        // if (!HttpHeaders.isKeepAlive(request) && outboundChannelPool.isEmpty(request) && inboundChannel.isConnected())
-        // Tools.closeOnFlush(inboundChannel);
-
     }
 
     @Override
@@ -67,9 +60,6 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
             Tools.closeOnFlush(outboundChannel);
             return;
         }
-
-        // TODO: keep-alive policy
-        HttpHeaders.setKeepAlive(response, true);
 
         // write response
         log.info("Inboundchannel {} - sending response - {}", inboundChannel.getId(), response.getStatus().toString());

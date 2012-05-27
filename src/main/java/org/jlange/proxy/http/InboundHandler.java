@@ -38,6 +38,10 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
 
+        // consider proxy request headers
+        // this proxy will always try to keep-alive connections
+        request.removeHeader("Proxy-Connection");
+
         log.info("Inboundchannel {} - request received - {}", inboundChannel.getId(), request.getUri());
         log.debug(request.toString());
         requests.push(request);
@@ -59,7 +63,8 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
                     outboundChannel.write(request);
                 } else {
                     log.warn("Outboundchannel {} - not connected, cannot send request", outboundChannel.getId());
-                    // really close the connection here, how does this case happen?
+                    // really close the connection here?
+                    // how does this case happen?
                     Tools.closeOnFlush(inboundChannel);
                 }
             }
