@@ -35,7 +35,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>org.jlange.proxy.Launcher</mainClass>
+							<mainClass>org.jlange.proxy.http.Server</mainClass>
 							<packageName>org.jlange.proxy.http</packageName>
 						</manifest>
 						<manifestEntries>
@@ -51,7 +51,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>org.jlange.proxy.Launcher</mainClass>
+							<mainClass>org.jlange.proxy.http.Server</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
