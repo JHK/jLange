@@ -41,7 +41,7 @@ public class OutboundChannelPool {
         usedOutboundChannelFutureMap = new HashMap<String, Queue<ChannelFuture>>();
     }
 
-    public synchronized ChannelFuture getChannelFuture(final Channel inboundChannel, final HttpRequest request) {
+    public ChannelFuture getChannelFuture(final Channel inboundChannel, final HttpRequest request) {
         final URL url = getURL(request);
         final Integer port = url.getPort() == -1 ? 80 : url.getPort();
         final String channelKey = getChannelKey(url);
@@ -51,8 +51,10 @@ public class OutboundChannelPool {
         final ChannelFuture f;
 
         if (!idleChannelQueue.isEmpty() && !idleChannelQueue.peek().getChannel().isConnected()) {
-            log.warn("Inboundchannel {} - unconnected channel in idle queue, choosing another one", inboundChannel.getId());
-            idleChannelQueue.remove();
+            // this may happen as a race condition if a channel is inserted into idle queue and going to get closed
+            final ChannelFuture future = idleChannelQueue.remove();
+            log.debug("Inboundchannel {} - unconnected channel in idle queue {}, choosing another one", inboundChannel.getId(), future
+                    .getChannel().getId());
             f = getChannelFuture(inboundChannel, request);
         } else if (idleChannelQueue.isEmpty()) {
             log.info("Inboundchannel {} - establishing new connection to {}", inboundChannel.getId(), channelKey);
@@ -95,7 +97,7 @@ public class OutboundChannelPool {
 
     public ChannelFutureListener getIdleConnectionListener(final HttpRequest request) {
         return new ChannelFutureListener() {
-            public synchronized void operationComplete(final ChannelFuture future) {
+            public void operationComplete(final ChannelFuture future) {
                 String channelKey = getChannelKey(request);
                 log.debug("Outboundchannel {} - channel is idle - {}", future.getChannel().getId(), channelKey);
                 idleOutboundChannelFutureMap.get(channelKey).add(future);
