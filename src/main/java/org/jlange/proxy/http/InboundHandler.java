@@ -9,6 +9,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -50,8 +51,9 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
                 public ChannelPipelineFactory getChannelPipelineFactory() {
                     return new ChannelPipelineFactory() {
                         public ChannelPipeline getPipeline() throws Exception {
-                            // TODO Auto-generated method stub
-                            return null;
+                            ChannelPipeline pipeline = Channels.pipeline();
+                            pipeline.addLast("handler", new PassthroughHandler(inboundChannel));
+                            return pipeline;
                         }
                     };
                 }
