@@ -11,7 +11,8 @@ import org.slf4j.LoggerFactory;
 
 public class Tools {
 
-    private static final String[] javascriptContentTypes = new String[] { "application/x-javascript", "text/javascript" };
+    private static final String[] javascriptContentTypes = new String[] { "application/x-javascript", "text/javascript",
+            "application/javascript"                    };
     private static final Logger   log                    = LoggerFactory.getLogger(Tools.class);
 
     /**

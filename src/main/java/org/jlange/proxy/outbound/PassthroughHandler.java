@@ -4,8 +4,10 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jlange.proxy.Tools;
 
 public class PassthroughHandler extends SimpleChannelUpstreamHandler {
 
@@ -27,4 +29,8 @@ public class PassthroughHandler extends SimpleChannelUpstreamHandler {
             otherChannel.close();
     }
 
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        Tools.closeOnFlush(otherChannel);
+        Tools.closeOnFlush(e.getChannel());
+    }
 }

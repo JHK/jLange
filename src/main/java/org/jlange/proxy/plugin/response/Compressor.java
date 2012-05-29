@@ -42,7 +42,7 @@ public class Compressor implements ResponsePlugin {
     }
 
     public Boolean isApplicable(final HttpResponse response) {
-        return HttpResponseStatus.OK.equals(response.getStatus())
+        return response.getStatus().equals(HttpResponseStatus.OK)
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
     }
 
