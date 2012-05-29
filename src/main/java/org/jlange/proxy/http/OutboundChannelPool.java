@@ -109,19 +109,19 @@ public class OutboundChannelPool {
     }
 
     /**
-     * Gets all outbound channels, idle and in use, matching to a given request
+     * Gets all outbound channels, idle and in use
      * 
-     * @param request the target for the channels
      * @return a {@link ChannelGroup} of all channels
      */
-    public synchronized ChannelGroup getChannels(final HttpRequest request) {
+    public ChannelGroup getChannels() {
         final ChannelGroup channels = new DefaultChannelGroup();
 
-        final String channelKey = getChannelKey(request);
-        for (ChannelFuture f : getChannelQueue(idleOutboundChannelFutureMap, channelKey))
-            channels.add(f.getChannel());
-        for (ChannelFuture f : getChannelQueue(usedOutboundChannelFutureMap, channelKey))
-            channels.add(f.getChannel());
+        for (String channelKey : idleOutboundChannelFutureMap.keySet())
+            for (ChannelFuture f : idleOutboundChannelFutureMap.get(channelKey))
+                channels.add(f.getChannel());
+        for (String channelKey : usedOutboundChannelFutureMap.keySet())
+            for (ChannelFuture f : usedOutboundChannelFutureMap.get(channelKey))
+                channels.add(f.getChannel());
 
         return channels;
     }

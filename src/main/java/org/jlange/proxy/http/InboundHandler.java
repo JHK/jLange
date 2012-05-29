@@ -1,8 +1,6 @@
 package org.jlange.proxy.http;
 
-import java.net.URI;
 import java.net.URL;
-import java.util.Stack;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -25,11 +23,9 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
 
     private final Logger              log = LoggerFactory.getLogger(getClass());
     private final OutboundChannelPool outboundChannelPool;
-    private final Stack<HttpRequest>  requests;
 
     public InboundHandler() {
         outboundChannelPool = new OutboundChannelPool();
-        requests = new Stack<HttpRequest>();
     }
 
     @Override
@@ -93,7 +89,6 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
         request.removeHeader("Proxy-Connection");
         log.info("Inboundchannel {} - request received - {}", inboundChannel.getId(), request.getUri());
         log.debug(request.toString());
-        requests.push(request);
 
         // get a channel future for target host
         final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, channelPipelineFactoryFactory);
@@ -108,11 +103,7 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
         log.info("Inboundchannel {} - closed", e.getChannel().getId());
 
         // close corresponding outbound channels
-        for (HttpRequest request : requests) {
-            // potential expensive logging, so it is covered by a condition
-            if (log.isDebugEnabled())
-                log.debug("Inboundchannel {} - cleaning up pool {}", e.getChannel().getId(), URI.create(request.getUri()).getHost());
-            outboundChannelPool.getChannels(request).close().awaitUninterruptibly();
-        }
+        outboundChannelPool.getChannels().close().awaitUninterruptibly();
+
     }
 }
