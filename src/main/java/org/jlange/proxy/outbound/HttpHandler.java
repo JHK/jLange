@@ -3,31 +3,31 @@ package org.jlange.proxy.outbound;
 import java.util.List;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.Tools;
-import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class HttpHandler extends SimpleChannelUpstreamHandler {
+class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    // TODO: move request to inbound handler
-    private final HttpRequest         request;
-    private final Logger              log = LoggerFactory.getLogger(getClass());
-    private final Channel             inboundChannel;
-    private final OutboundChannelPool outboundChannelPool;
+    private final Logger                log = LoggerFactory.getLogger(getClass());
+    private final Channel               inboundChannel;
+    private final List<ResponsePlugin>  responsePlugins;
+    private final ChannelFutureListener messageReceivedListener;
 
-    HttpHandler(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
+    HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins,
+            final ChannelFutureListener messageReceivedListener) {
         this.inboundChannel = inboundChannel;
-        this.request = request;
-        this.outboundChannelPool = outboundChannelPool;
+        this.responsePlugins = responsePlugins;
+        this.messageReceivedListener = messageReceivedListener;
     }
 
     @Override
@@ -47,11 +47,12 @@ class HttpHandler extends SimpleChannelUpstreamHandler {
         final Channel outboundChannel = e.getChannel();
         log.info("Outboundchannel {} - response received - {}", outboundChannel.getId(), response.getStatus().toString());
 
-        final List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request, response);
         for (ResponsePlugin plugin : responsePlugins) {
-            log.info("Outboundchannel {} - using plugin {}", outboundChannel.getId(), plugin.getClass().getName());
-            plugin.run(request, response);
-            plugin.updateResponse(response);
+            if (plugin.isApplicable(response)) {
+                log.info("Outboundchannel {} - using plugin {}", outboundChannel.getId(), plugin.getClass().getName());
+                plugin.run(response);
+                plugin.updateResponse(response);
+            }
         }
 
         // error handling for not connected inbound channel
@@ -68,6 +69,6 @@ class HttpHandler extends SimpleChannelUpstreamHandler {
         inboundChannel.write(response);
 
         // add outbound channel to idle list
-        e.getFuture().addListener(outboundChannelPool.getIdleConnectionListener(request));
+        e.getFuture().addListener(messageReceivedListener);
     }
 }

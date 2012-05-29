@@ -49,7 +49,7 @@ public class PreloadDetector implements ResponsePlugin {
         return false;
     }
 
-    public void run(final HttpRequest request, final HttpResponse response) {
+    public void run(final HttpResponse response) {
         List<String> urls = new LinkedList<String>();
 
         if (!Tools.isHtml(response))

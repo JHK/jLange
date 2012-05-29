@@ -1,6 +1,7 @@
 package org.jlange.proxy.inbound;
 
 import java.net.URL;
+import java.util.List;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -26,6 +27,8 @@ import org.jlange.proxy.outbound.ChannelPipelineFactoryFactory;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.outbound.PassthroughHandler;
+import org.jlange.proxy.plugin.PluginProvider;
+import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,12 +58,11 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final ChannelFutureListener channelFutureListener;
 
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
-            log.error("connect");
             channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
                 public ChannelPipelineFactory getChannelPipelineFactory() {
                     return new ChannelPipelineFactory() {
                         public ChannelPipeline getPipeline() throws Exception {
-                            ChannelPipeline pipeline = Channels.pipeline();
+                            final ChannelPipeline pipeline = Channels.pipeline();
                             pipeline.addLast("handler", new PassthroughHandler(inboundChannel));
                             return pipeline;
                         }
@@ -68,17 +70,28 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
                 }
             };
             channelFutureListener = new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(final ChannelFuture f) {
                     log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
                     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                     HttpHeaders.setKeepAlive(response, true);
                     inboundChannel.write(response);
+                    inboundChannel.setReadable(false);
+                    for (String name : inboundChannel.getPipeline().getNames())
+                        inboundChannel.getPipeline().remove(name);
+                    inboundChannel.getPipeline().addLast("handler", new PassthroughHandler(f.getChannel()));
+                    inboundChannel.setReadable(true);
+                    log.info("Inboundchannel {} - passthrough to outboundchannel {}", inboundChannel.getId(), f.getChannel().getId());
                 }
             };
         } else {
             channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
                 public ChannelPipelineFactory getChannelPipelineFactory() {
-                    return new HttpPipelineFactory(inboundChannel, request, outboundChannelPool);
+                    List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
+                    return new HttpPipelineFactory(inboundChannel, responsePlugins, new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            outboundChannelPool.getIdleConnectionListener(request);
+                        }
+                    });
                 }
             };
             // this needs to be here and not as connected listener on OutboundHandler, because the connection may not be new

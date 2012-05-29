@@ -27,7 +27,7 @@ public interface ResponsePlugin {
      * @param request {@link HttpRequest}
      * @param response matching {@link HttpResponse}
      */
-    public void run(final HttpRequest request, final HttpResponse response);
+    public void run(final HttpResponse response);
 
     /**
      * Update the response regarding the plugins intention.

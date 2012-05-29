@@ -17,9 +17,7 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
         return response != null && !response.getHeaders().isEmpty();
     }
 
-    public void run(HttpRequest request, HttpResponse response) {
-
-    }
+    public void run(final HttpResponse response) {}
 
     public void updateResponse(HttpResponse response) {
         // remove all headers starting with "x-"
@@ -30,10 +28,5 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
         for (String header : removeableHeaders)
             if (HttpHeaders.getHeader(response, header) != null)
                 response.removeHeader(header);
-
-        // response.setHeader("Accept-Encoding", "gzip");
-        // response.setHeader("Content-Encoding", "gzip");
-        // response.removeHeader("Content-Length");
-        // response.setHeader("Content-Length", "1200");
     }
 }

@@ -46,10 +46,7 @@ public class Compressor implements ResponsePlugin {
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
     }
 
-    public void run(final HttpRequest request, final HttpResponse response) {
-        if (!isApplicable(request) || !isApplicable(response))
-            throw new RuntimeException("Plugin not applicable");
-
+    public void run(final HttpResponse response) {
         encoding = Tools.getCharset(response);
         content = response.getContent().toString(encoding);
 
@@ -59,7 +56,6 @@ public class Compressor implements ResponsePlugin {
             log.error(e.getMessage());
         }
 
-        log.info(request.getUri());
         if (log.isDebugEnabled()) {
             Integer savedBytes = compressor.getStatistics().getOriginalMetrics().getFilesize()
                     - compressor.getStatistics().getCompressedMetrics().getFilesize();
