@@ -1,4 +1,4 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.outbound;
 
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -6,15 +6,20 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.SocketChannel;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jlange.proxy.ChannelPipelineFactoryFactory;
 import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +47,6 @@ public class OutboundChannelPool {
     }
 
     public ChannelFuture getChannelFuture(final URL url, final ChannelPipelineFactoryFactory channelPipelineFactoryFactory) {
-        final Integer port = url.getPort() == -1 ? 80 : url.getPort();
         final String channelKey = getChannelKey(url);
 
         final Queue<ChannelFuture> idleChannelQueue = getChannelQueue(idleOutboundChannelFutureMap, channelKey);
@@ -55,7 +59,7 @@ public class OutboundChannelPool {
             log.debug("Unconnected channel in idle queue {}, choosing another one", future.getChannel().getId());
             f = getChannelFuture(url, channelPipelineFactoryFactory);
         } else if (idleChannelQueue.isEmpty()) {
-            log.info("Establishing new connection to {}", url.toString());
+            log.info("Establishing new connection to {}", url.getHost());
 
             // setup client
             final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
@@ -64,7 +68,7 @@ public class OutboundChannelPool {
             outboundClient.setOption("child.keepAlive", true);
 
             // connect to remote host
-            f = outboundClient.connect(new InetSocketAddress(url.getHost(), port));
+            f = outboundClient.connect(new InetSocketAddress(url.getHost(), url.getPort() == -1 ? 80 : url.getPort()));
             log.info("Outboundchannel {} - created", f.getChannel().getId());
 
             // cleanup outboundChannels on close
@@ -79,7 +83,7 @@ public class OutboundChannelPool {
             });
         } else {
             f = idleChannelQueue.remove();
-            log.info("Outboundchannel {} - reused connection to {} ", f.getChannel().getId(), url.toString());
+            log.info("Outboundchannel {} - reused connection to {} ", f.getChannel().getId(), url.getHost());
         }
 
         // add this channel future to used channels
@@ -187,4 +191,38 @@ public class OutboundChannelPool {
         log.debug(dump.toString());
     }
 
+    /***
+     * A class extending {@link NioServerSocketChannelFactory} to keep track of opened client channels.
+     * 
+     * @author Julian Knocke
+     */
+    public static class OutboundSocketChannelFactory extends NioClientSocketChannelFactory implements ClientSocketChannelFactory {
+
+        private final ChannelGroup allChannels;
+
+        public OutboundSocketChannelFactory(final ExecutorService newCachedThreadPool, final ExecutorService newCachedThreadPool2) {
+            super(newCachedThreadPool, newCachedThreadPool2);
+
+            allChannels = new DefaultChannelGroup("client");
+        }
+
+        @Override
+        public SocketChannel newChannel(ChannelPipeline pipeline) {
+            final SocketChannel channel = super.newChannel(pipeline);
+
+            allChannels.add(channel);
+            channel.getCloseFuture().addListener(new ChannelFutureListener() {
+                public void operationComplete(ChannelFuture future) throws Exception {
+                    allChannels.remove(channel);
+                }
+            });
+
+            return channel;
+        }
+
+        public ChannelGroup getChannels() {
+            return allChannels;
+        }
+
+    }
 }

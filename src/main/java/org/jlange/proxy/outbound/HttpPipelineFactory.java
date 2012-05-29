@@ -1,4 +1,4 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.outbound;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -10,13 +10,13 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 
-public class OutboundPipelineFactory implements ChannelPipelineFactory {
+public class HttpPipelineFactory implements ChannelPipelineFactory {
 
     private final Channel inboundChannel;
     private final HttpRequest request;
     private final OutboundChannelPool outboundChannelpool;
     
-    public OutboundPipelineFactory(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
+    public HttpPipelineFactory(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
         this.inboundChannel = inboundChannel;
         this.request = request;
         this.outboundChannelpool = outboundChannelPool;
@@ -29,7 +29,7 @@ public class OutboundPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("handler", new OutboundHandler(inboundChannel, request, outboundChannelpool));
+        pipeline.addLast("handler", new HttpHandler(inboundChannel, request, outboundChannelpool));
 
         return pipeline;
     }

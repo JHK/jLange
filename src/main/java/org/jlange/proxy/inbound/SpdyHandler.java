@@ -1,10 +1,11 @@
-package org.jlange.proxy.spdy;
+package org.jlange.proxy.inbound;
 
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
-public class InboundHandler extends SimpleChannelUpstreamHandler {
+public class SpdyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         Object o = e.getMessage();

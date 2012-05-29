@@ -1,10 +1,11 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.inbound;
 
 import java.net.URL;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -13,19 +14,27 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jlange.proxy.ChannelPipelineFactoryFactory;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.Tools;
+import org.jlange.proxy.outbound.ChannelPipelineFactoryFactory;
+import org.jlange.proxy.outbound.HttpPipelineFactory;
+import org.jlange.proxy.outbound.OutboundChannelPool;
+import org.jlange.proxy.outbound.PassthroughHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class InboundHandler extends SimpleChannelUpstreamHandler {
+public class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     private final Logger              log = LoggerFactory.getLogger(getClass());
     private final OutboundChannelPool outboundChannelPool;
 
-    public InboundHandler() {
+    public HttpHandler() {
         outboundChannelPool = new OutboundChannelPool();
     }
 
@@ -60,14 +69,16 @@ public class InboundHandler extends SimpleChannelUpstreamHandler {
             };
             channelFutureListener = new ChannelFutureListener() {
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    // TODO Auto-generated method stub
+                    log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
+                    HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+                    HttpHeaders.setKeepAlive(response, true);
+                    inboundChannel.write(response);
                 }
             };
-
         } else {
             channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
                 public ChannelPipelineFactory getChannelPipelineFactory() {
-                    return new OutboundPipelineFactory(inboundChannel, request, outboundChannelPool);
+                    return new HttpPipelineFactory(inboundChannel, request, outboundChannelPool);
                 }
             };
             // this needs to be here and not as connected listener on OutboundHandler, because the connection may not be new

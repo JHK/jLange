@@ -1,4 +1,4 @@
-package org.jlange.proxy.spdy;
+package org.jlange.proxy.inbound;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -16,7 +16,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 
-public class InboundPipelineFactory implements ChannelPipelineFactory {
+public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
     public ChannelPipeline getPipeline() throws Exception {
         final ChannelPipeline pipeline = Channels.pipeline();
@@ -38,7 +38,7 @@ public class InboundPipelineFactory implements ChannelPipelineFactory {
         // pipeline.addLast("decoder", new SpdyFrameDecoder());
         // pipeline.addLast("encoder", new SpdyFrameEncoder());
 
-        pipeline.addLast("handler", new InboundHandler());
+        pipeline.addLast("handler", new SpdyHandler());
 
         // pipeline.addLast("deflater", new HttpContentCompressor(9));
         // pipeline.addLast("handler", new InboundHandler());

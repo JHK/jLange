@@ -1,4 +1,4 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.outbound;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class OutboundHandler extends SimpleChannelUpstreamHandler {
+class HttpHandler extends SimpleChannelUpstreamHandler {
 
     // TODO: move request to inbound handler
     private final HttpRequest         request;
@@ -24,7 +24,7 @@ class OutboundHandler extends SimpleChannelUpstreamHandler {
     private final Channel             inboundChannel;
     private final OutboundChannelPool outboundChannelPool;
 
-    OutboundHandler(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
+    HttpHandler(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
         this.inboundChannel = inboundChannel;
         this.request = request;
         this.outboundChannelPool = outboundChannelPool;

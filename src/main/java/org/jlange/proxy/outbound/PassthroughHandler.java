@@ -1,4 +1,4 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.outbound;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;

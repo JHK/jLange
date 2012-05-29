@@ -1,4 +1,4 @@
-package org.jlange.proxy;
+package org.jlange.proxy.outbound;
 
 import org.jboss.netty.channel.ChannelPipelineFactory;
 
