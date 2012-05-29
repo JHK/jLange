@@ -18,9 +18,10 @@ import org.slf4j.LoggerFactory;
 
 class OutboundHandler extends SimpleChannelUpstreamHandler {
 
+    // TODO: move request to inbound handler
+    private final HttpRequest         request;
     private final Logger              log = LoggerFactory.getLogger(getClass());
     private final Channel             inboundChannel;
-    private final HttpRequest         request;
     private final OutboundChannelPool outboundChannelPool;
 
     OutboundHandler(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
