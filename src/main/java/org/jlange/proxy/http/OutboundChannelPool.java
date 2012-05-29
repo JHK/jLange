@@ -1,7 +1,6 @@
 package org.jlange.proxy.http;
 
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -10,12 +9,13 @@ import java.util.Queue;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jlange.proxy.ChannelPipelineFactoryFactory;
+import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +24,7 @@ public class OutboundChannelPool {
     private static final OutboundSocketChannelFactory outboundFactory = new OutboundSocketChannelFactory(Executors.newCachedThreadPool(),
                                                                               Executors.newCachedThreadPool());
 
-    protected static OutboundSocketChannelFactory getOutboundFactory() {
+    public static OutboundSocketChannelFactory getOutboundFactory() {
         return outboundFactory;
     }
 
@@ -41,8 +41,7 @@ public class OutboundChannelPool {
         usedOutboundChannelFutureMap = new HashMap<String, Queue<ChannelFuture>>();
     }
 
-    public ChannelFuture getChannelFuture(final Channel inboundChannel, final HttpRequest request) {
-        final URL url = getURL(request);
+    public ChannelFuture getChannelFuture(final URL url, final ChannelPipelineFactoryFactory channelPipelineFactoryFactory) {
         final Integer port = url.getPort() == -1 ? 80 : url.getPort();
         final String channelKey = getChannelKey(url);
 
@@ -53,21 +52,20 @@ public class OutboundChannelPool {
         if (!idleChannelQueue.isEmpty() && !idleChannelQueue.peek().getChannel().isConnected()) {
             // this may happen as a race condition if a channel is inserted into idle queue and going to get closed
             final ChannelFuture future = idleChannelQueue.remove();
-            log.debug("Inboundchannel {} - unconnected channel in idle queue {}, choosing another one", inboundChannel.getId(), future
-                    .getChannel().getId());
-            f = getChannelFuture(inboundChannel, request);
+            log.debug("Unconnected channel in idle queue {}, choosing another one", future.getChannel().getId());
+            f = getChannelFuture(url, channelPipelineFactoryFactory);
         } else if (idleChannelQueue.isEmpty()) {
-            log.info("Inboundchannel {} - establishing new connection to {}", inboundChannel.getId(), channelKey);
+            log.info("Establishing new connection to {}", url.toString());
 
             // setup client
             final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
-            outboundClient.setPipelineFactory(new OutboundPipelineFactory(inboundChannel, request, this));
+            outboundClient.setPipelineFactory(channelPipelineFactoryFactory.getChannelPipelineFactory());
             outboundClient.setOption("child.tcpNoDelay", true);
             outboundClient.setOption("child.keepAlive", true);
 
             // connect to remote host
             f = outboundClient.connect(new InetSocketAddress(url.getHost(), port));
-            log.info("Outboundchannel {} <-> Inboundchannel {}", f.getChannel().getId(), inboundChannel.getId());
+            log.info("Outboundchannel {} - created", f.getChannel().getId());
 
             // cleanup outboundChannels on close
             f.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
@@ -76,13 +74,12 @@ public class OutboundChannelPool {
                     idleOutboundChannelFutureMap.get(channelKey).clear();
                     usedOutboundChannelFutureMap.get(channelKey).clear();
                     if (log.isDebugEnabled())
-                        dumpPool(inboundChannel);
+                        dumpPool();
                 }
             });
         } else {
             f = idleChannelQueue.remove();
-            log.info("Outboundchannel {} - reused connection for channel {} - " + channelKey, f.getChannel().getId(),
-                    inboundChannel.getId());
+            log.info("Outboundchannel {} - reused connection to {} ", f.getChannel().getId(), url.toString());
         }
 
         // add this channel future to used channels
@@ -90,7 +87,7 @@ public class OutboundChannelPool {
             usedChannelQueue.add(f);
 
         if (log.isDebugEnabled())
-            dumpPool(inboundChannel);
+            dumpPool();
 
         return f;
     }
@@ -106,7 +103,7 @@ public class OutboundChannelPool {
                         usedOutboundChannelFutureMap.get(channelKey).remove(f);
 
                 if (log.isDebugEnabled())
-                    dumpPool(null);
+                    dumpPool();
             }
         };
     }
@@ -142,20 +139,8 @@ public class OutboundChannelPool {
         return usedChannelQueue.isEmpty() && idleChannelQueue.isEmpty();
     }
 
-    private URL getURL(final HttpRequest request) {
-        URL url = null;
-
-        try {
-            url = new URL(request.getUri());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-
-        return url;
-    }
-
     private String getChannelKey(final HttpRequest request) {
-        return getChannelKey(getURL(request));
+        return getChannelKey(Tools.getURL(request));
     }
 
     private String getChannelKey(final URL url) {
@@ -175,12 +160,8 @@ public class OutboundChannelPool {
         return channelQueue;
     }
 
-    private void dumpPool(final Channel inboundChannel) {
+    private void dumpPool() {
         StringBuilder dump = new StringBuilder();
-        if (inboundChannel != null) {
-            dump.append("Inboundchannel ");
-            dump.append(inboundChannel.getId());
-        }
         dump.append("\nIn use channels:");
         for (String s : usedOutboundChannelFutureMap.keySet()) {
             for (ChannelFuture f : usedOutboundChannelFutureMap.get(s)) {

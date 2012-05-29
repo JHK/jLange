@@ -1,4 +1,4 @@
-package org.jlange.proxy.http;
+package org.jlange.proxy.spdy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -6,13 +6,15 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
+import org.jlange.proxy.http.InboundSocketChannelFactory;
+import org.jlange.proxy.http.OutboundChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Server {
+public class SpdyProxyServer {
 
     public static void main(String[] args) throws IOException {
-        Server proxy = new Server(8080);
+        SpdyProxyServer proxy = new SpdyProxyServer(8443);
         proxy.start();
         System.in.read();
         proxy.stop();
@@ -23,7 +25,7 @@ public class Server {
 
     private final int                         port;
 
-    public Server(final int port) {
+    public SpdyProxyServer(final int port) {
         this.port = port;
         inboundFactory = new InboundSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
