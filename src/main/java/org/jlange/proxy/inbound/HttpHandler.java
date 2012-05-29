@@ -3,15 +3,15 @@ package org.jlange.proxy.inbound;
 import java.net.URL;
 import java.util.List;
 
+import javax.net.ssl.SSLEngine;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -22,11 +22,12 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.ssl.SslHandler;
 import org.jlange.proxy.Tools;
+import org.jlange.proxy.inbound.ssl.SecureSslContextFactory;
 import org.jlange.proxy.outbound.ChannelPipelineFactoryFactory;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
-import org.jlange.proxy.outbound.PassthroughHandler;
 import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
@@ -60,13 +61,12 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
             channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
                 public ChannelPipelineFactory getChannelPipelineFactory() {
-                    return new ChannelPipelineFactory() {
-                        public ChannelPipeline getPipeline() throws Exception {
-                            final ChannelPipeline pipeline = Channels.pipeline();
-                            pipeline.addLast("handler", new PassthroughHandler(inboundChannel));
-                            return pipeline;
+                    List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
+                    return new HttpPipelineFactory(inboundChannel, responsePlugins, new ChannelFutureListener() {
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            outboundChannelPool.getIdleConnectionListener(request);
                         }
-                    };
+                    });
                 }
             };
             channelFutureListener = new ChannelFutureListener() {
@@ -75,12 +75,12 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
                     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                     HttpHeaders.setKeepAlive(response, true);
                     inboundChannel.write(response);
+
                     inboundChannel.setReadable(false);
-                    for (String name : inboundChannel.getPipeline().getNames())
-                        inboundChannel.getPipeline().remove(name);
-                    inboundChannel.getPipeline().addLast("handler", new PassthroughHandler(f.getChannel()));
+                    SSLEngine engine = SecureSslContextFactory.getServerContext().createSSLEngine();
+                    engine.setUseClientMode(false);
+                    inboundChannel.getPipeline().addFirst("ssl", new SslHandler(engine));
                     inboundChannel.setReadable(true);
-                    log.info("Inboundchannel {} - passthrough to outboundchannel {}", inboundChannel.getId(), f.getChannel().getId());
                 }
             };
         } else {
