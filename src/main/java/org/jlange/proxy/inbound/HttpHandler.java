@@ -59,12 +59,12 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final Channel inboundChannel = e.getChannel();
 
         // consider proxy requests and choose channel factory
-        final ChannelPipelineFactoryFactory channelPipelineFactoryFactory;
-        final ChannelFutureListener channelFutureListener;
+        final ChannelPipelineFactoryFactory outboundChannelPipelineFactoryFactory;
+        final ChannelFutureListener outboundChannelFutureListener;
 
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
-            channelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
-            channelFutureListener = new ChannelFutureListener() {
+            outboundChannelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
+            outboundChannelFutureListener = new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture f) {
                     log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
                     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -79,21 +79,14 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
                 }
             };
         } else {
-            channelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
+            outboundChannelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
 
             // this needs to be here and not as connected listener on OutboundHandler, because the connection may not be new
-            channelFutureListener = new ChannelFutureListener() {
+            outboundChannelFutureListener = new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture future) {
                     final Channel outboundChannel = future.getChannel();
-                    if (outboundChannel.isConnected()) {
-                        log.info("Outboundchannel {} - sending request - {}", outboundChannel.getId(), request.getUri());
-                        outboundChannel.write(request);
-                    } else {
-                        log.warn("Outboundchannel {} - not connected, cannot send request", outboundChannel.getId());
-                        // really close the connection here?
-                        // how does this case happen?
-                        Tools.closeOnFlush(inboundChannel);
-                    }
+                    log.info("Outboundchannel {} - sending request - {}", outboundChannel.getId(), request.getUri());
+                    outboundChannel.write(request);
                 }
             };
         }
@@ -105,10 +98,10 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
 
         // get a channel future for target host
         final URL url = Tools.getURL(request);
-        final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, channelPipelineFactoryFactory);
+        final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, outboundChannelPipelineFactoryFactory);
 
-        // send request
-        outboundChannelFuture.addListener(channelFutureListener);
+        // do what needs to be done when the outbound channel is connected
+        outboundChannelFuture.addListener(outboundChannelFutureListener);
     }
 
     @Override
@@ -123,7 +116,6 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
     private ChannelPipelineFactoryFactory getHttpChannelPipelineFactoryFactory(final HttpRequest request, final Channel inboundChannel) {
         return new ChannelPipelineFactoryFactory() {
             public ChannelPipelineFactory getChannelPipelineFactory() {
-
                 List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
 
                 ChannelFutureListener messageReceived = outboundChannelPool.getConnectionIdleFutureListener();
