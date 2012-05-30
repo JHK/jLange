@@ -8,6 +8,7 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import org.jlange.proxy.inbound.IdleShutdownHandler;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 
@@ -24,6 +25,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast("idle", new IdleShutdownHandler(0,30));
         pipeline.addLast("handler", httpHandler);
 
         return pipeline;

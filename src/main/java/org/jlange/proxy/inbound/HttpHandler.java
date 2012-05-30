@@ -108,7 +108,6 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, channelPipelineFactoryFactory);
 
         // send request
-        outboundChannelFuture.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
         outboundChannelFuture.addListener(channelFutureListener);
     }
 
