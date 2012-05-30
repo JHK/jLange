@@ -49,6 +49,11 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
     }
 
     @Override
+    public void channelBound(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
+        log.info("Inboundchannel {} - created", e.getChannel().getId());
+    }
+
+    @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
