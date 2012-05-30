@@ -54,23 +54,11 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final Channel inboundChannel = e.getChannel();
 
         // consider proxy requests and choose channel factory
-        final URL url = Tools.getURL(request);
         final ChannelPipelineFactoryFactory channelPipelineFactoryFactory;
         final ChannelFutureListener channelFutureListener;
 
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
-            channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
-                public ChannelPipelineFactory getChannelPipelineFactory() {
-
-                    ChannelFutureListener messageReceivedListener = outboundChannelPool.setConnectionIdle(request);
-
-                    List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
-
-                    ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins, messageReceivedListener);
-                    
-                    return new HttpPipelineFactory(outboundHandler);
-                }
-            };
+            channelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
             channelFutureListener = new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture f) {
                     log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
@@ -86,18 +74,8 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
                 }
             };
         } else {
-            channelPipelineFactoryFactory = new ChannelPipelineFactoryFactory() {
-                public ChannelPipelineFactory getChannelPipelineFactory() {
+            channelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
 
-                    ChannelFutureListener messageReceivedListener = outboundChannelPool.setConnectionIdle(request);
-
-                    List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
-
-                    ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins, messageReceivedListener);
-                    
-                    return new HttpPipelineFactory(outboundHandler);
-                }
-            };
             // this needs to be here and not as connected listener on OutboundHandler, because the connection may not be new
             channelFutureListener = new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture future) {
@@ -121,6 +99,7 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         log.debug(request.toString());
 
         // get a channel future for target host
+        final URL url = Tools.getURL(request);
         final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, channelPipelineFactoryFactory);
 
         // send request
@@ -135,5 +114,18 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         // close corresponding outbound channels
         outboundChannelPool.getChannels().close().awaitUninterruptibly();
 
+    }
+
+    private ChannelPipelineFactoryFactory getHttpChannelPipelineFactoryFactory(final HttpRequest request, final Channel inboundChannel) {
+        return new ChannelPipelineFactoryFactory() {
+            public ChannelPipelineFactory getChannelPipelineFactory() {
+
+                List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
+
+                ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins);
+
+                return new HttpPipelineFactory(outboundHandler);
+            }
+        };
     }
 }
