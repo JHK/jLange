@@ -10,6 +10,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.Tools;
 import org.jlange.proxy.plugin.ResponsePlugin;
@@ -21,19 +22,20 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
     private final Logger                log = LoggerFactory.getLogger(getClass());
     private final Channel               inboundChannel;
     private final List<ResponsePlugin>  responsePlugins;
-    private final ChannelFutureListener messageReceivedListener;
+    private final ChannelFutureListener messageSentListener;
 
     public HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins,
-            final ChannelFutureListener messageReceivedListener) {
+            final ChannelFutureListener messageSentListener) {
         this.inboundChannel = inboundChannel;
         this.responsePlugins = responsePlugins;
-        this.messageReceivedListener = messageReceivedListener;
+        this.messageSentListener = messageSentListener;
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        log.error("Outboundchannel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         Tools.closeOnFlush(e.getChannel());
+        Tools.closeOnFlush(inboundChannel);
     }
 
     @Override
@@ -63,12 +65,20 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
             return;
         }
 
+        // check closing outbound connection and keep inbound
+        final ChannelFutureListener messageSentListener;
+        if (!HttpHeaders.isKeepAlive(response)) {
+            messageSentListener = ChannelFutureListener.CLOSE;
+            HttpHeaders.setKeepAlive(response, true);
+        } else {
+            messageSentListener = this.messageSentListener;
+        }
+
         // write response
         log.info("Inboundchannel {} - sending response - {}", inboundChannel.getId(), response.getStatus().toString());
         log.debug("Inboundchannel {} - {}", inboundChannel.getId(), response.toString());
         inboundChannel.write(response);
 
-        // add outbound channel to idle list
-        e.getFuture().addListener(messageReceivedListener);
+        e.getFuture().addListener(messageSentListener);
     }
 }
