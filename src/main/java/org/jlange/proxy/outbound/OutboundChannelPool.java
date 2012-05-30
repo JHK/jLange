@@ -10,17 +10,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,81 +33,122 @@ public class OutboundChannelPool {
         return outboundFactory;
     }
 
-    private final Logger                            log = LoggerFactory.getLogger(getClass());
-
-    // keeps track of outbound channels which are hold but currently not used
-    private final Map<String, Queue<ChannelFuture>> idleOutboundChannelFutureMap;
-
-    // keeps track of outbound channels which are currently in use
-    private final Map<String, Queue<ChannelFuture>> usedOutboundChannelFutureMap;
-
-    public OutboundChannelPool() {
-        idleOutboundChannelFutureMap = new HashMap<String, Queue<ChannelFuture>>();
-        usedOutboundChannelFutureMap = new HashMap<String, Queue<ChannelFuture>>();
+    private static String getChannelKey(final URL url) {
+        final String host = url.getHost();
+        final Integer port = url.getPort() == -1 ? 80 : url.getPort();
+        return new StringBuilder().append(host).append(":").append(port).toString();
     }
 
-    public ChannelFuture getChannelFuture(final URL url, final ChannelPipelineFactoryFactory channelPipelineFactoryFactory) {
+    private final Logger                      log = LoggerFactory.getLogger(getClass());
+
+    /**
+     * holds a queue of channels for a host
+     */
+    private final Map<String, Queue<Channel>> channels;
+
+    /**
+     * holds the most recent future to a given channel
+     */
+    private final Map<Channel, ChannelFuture> channelFuture;
+
+    /**
+     * identifies a channel as idle
+     */
+    private final Map<Channel, Boolean>       channelIdle;
+
+    public OutboundChannelPool() {
+        channels = new HashMap<String, Queue<Channel>>();
+        channelFuture = new HashMap<Channel, ChannelFuture>();
+        channelIdle = new HashMap<Channel, Boolean>();
+    }
+
+    public ChannelFuture getNewChannelFuture(final URL url, final ChannelPipelineFactory channelPipelineFactory) {
         final String channelKey = getChannelKey(url);
 
-        final Queue<ChannelFuture> idleChannelQueue = getChannelQueue(idleOutboundChannelFutureMap, channelKey);
-        final Queue<ChannelFuture> usedChannelQueue = getChannelQueue(usedOutboundChannelFutureMap, channelKey);
-        final ChannelFuture f;
+        // setup client
+        final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
+        outboundClient.setPipelineFactory(channelPipelineFactory);
+        outboundClient.setOption("child.tcpNoDelay", true);
+        outboundClient.setOption("child.keepAlive", true);
 
-        if (!idleChannelQueue.isEmpty() && !idleChannelQueue.peek().getChannel().isConnected()) {
-            // this may happen as a race condition if a channel is inserted into idle queue and going to get closed
-            final ChannelFuture future = idleChannelQueue.remove();
-            log.debug("Unconnected channel in idle queue {}, choosing another one", future.getChannel().getId());
-            f = getChannelFuture(url, channelPipelineFactoryFactory);
-        } else if (idleChannelQueue.isEmpty()) {
-            log.info("Establishing new connection to {}", url.getHost());
+        // connect to remote host
+        final ChannelFuture f = outboundClient.connect(new InetSocketAddress(url.getHost(), url.getPort() == -1 ? 80 : url.getPort()));
+        log.info("Outboundchannel {} - created", f.getChannel().getId());
 
-            // setup client
-            final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
-            outboundClient.setPipelineFactory(channelPipelineFactoryFactory.getChannelPipelineFactory());
-            outboundClient.setOption("child.tcpNoDelay", true);
-            outboundClient.setOption("child.keepAlive", true);
+        // cleanup channels on close
+        f.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                removeChannel(channelKey, future.getChannel());
+            }
+        });
 
-            // connect to remote host
-            f = outboundClient.connect(new InetSocketAddress(url.getHost(), url.getPort() == -1 ? 80 : url.getPort()));
-            log.info("Outboundchannel {} - created", f.getChannel().getId());
-
-            // cleanup outboundChannels on close
-            f.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
-                public void operationComplete(final ChannelFuture future) throws Exception {
-                    log.debug("Outboundchannel {} - connection closed, remove from pool - {}", future.getChannel().getId(), channelKey);
-                    idleOutboundChannelFutureMap.get(channelKey).clear();
-                    usedOutboundChannelFutureMap.get(channelKey).clear();
-                    if (log.isDebugEnabled())
-                        dumpPool();
-                }
-            });
-        } else {
-            f = idleChannelQueue.remove();
-            log.info("Outboundchannel {} - reused connection to {} ", f.getChannel().getId(), url.getHost());
-        }
-
-        // add this channel future to used channels
-        if (!usedChannelQueue.contains(f))
-            usedChannelQueue.add(f);
-
-        if (log.isDebugEnabled())
-            dumpPool();
+        addChannelFuture(channelKey, f);
 
         return f;
     }
 
-    public ChannelFutureListener setConnectionIdle(final HttpRequest request) {
+    public ChannelFuture getChannelFuture(final URL url, final ChannelPipelineFactoryFactory channelPipelineFactoryFactory) {
+        final ChannelFuture f;
+
+        final String channelKey = getChannelKey(url);
+
+        if (channels.get(channelKey) == null || channels.get(channelKey).isEmpty()) {
+            f = getNewChannelFuture(url, channelPipelineFactoryFactory.getChannelPipelineFactory());
+        } else {
+            ChannelFuture tmpF = null;
+            for (Channel channel : channels.get(channelKey)) {
+                if (channel.isConnected() && channelIdle.get(channel)) {
+                    log.info("Outboundchannel {} - reused connection to {} ", channel.getId(), url.getHost());
+                    tmpF = channelFuture.get(channel);
+                    break;
+                }
+            }
+
+            if (tmpF == null)
+                f = getNewChannelFuture(url, channelPipelineFactoryFactory.getChannelPipelineFactory());
+            else
+                f = tmpF;
+        }
+
+        useChannel(f.getChannel());
+
+        return f;
+    }
+
+    private void addChannelFuture(String channelKey, ChannelFuture future) {
+        Queue<Channel> channels = new LinkedList<Channel>();
+        this.channels.put(channelKey, channels);
+
+        Channel channel = future.getChannel();
+
+        channels.add(channel);
+        channelFuture.put(channel, future);
+        channelIdle.put(channel, false);
+        log.debug("Outboundchannel {} - added to queue", channel.getId());
+    }
+
+    private void idleChannel(ChannelFuture future) {
+        channelIdle.put(future.getChannel(), true);
+        channelFuture.put(future.getChannel(), future);
+        log.debug("Outboundchannel {} - set to idle", future.getChannel().getId());
+    }
+
+    private void useChannel(Channel channel) {
+        channelIdle.put(channel, false);
+        log.debug("Outboundchannel {} - set to in use", channel.getId());
+    }
+
+    private void removeChannel(String channelKey, Channel channel) {
+        log.debug("Outboundchannel {} - removed from queue", channel.getId());
+        channels.get(channelKey).remove(channel);
+        channelFuture.remove(channel);
+        channelIdle.remove(channel);
+    }
+
+    public ChannelFutureListener getConnectionIdleFutureListener() {
         return new ChannelFutureListener() {
             public void operationComplete(final ChannelFuture future) {
-                String channelKey = getChannelKey(request);
-                log.debug("Outboundchannel {} - channel is idle - {}", future.getChannel().getId(), channelKey);
-                idleOutboundChannelFutureMap.get(channelKey).add(future);
-                for (ChannelFuture f : usedOutboundChannelFutureMap.get(channelKey))
-                    if (f.getChannel().getId() == future.getChannel().getId())
-                        usedOutboundChannelFutureMap.get(channelKey).remove(f);
-
-                if (log.isDebugEnabled())
-                    dumpPool();
+                idleChannel(future);
             }
         };
     }
@@ -120,74 +161,28 @@ public class OutboundChannelPool {
     public ChannelGroup getChannels() {
         final ChannelGroup channels = new DefaultChannelGroup();
 
-        for (String channelKey : idleOutboundChannelFutureMap.keySet())
-            for (ChannelFuture f : idleOutboundChannelFutureMap.get(channelKey))
-                channels.add(f.getChannel());
-        for (String channelKey : usedOutboundChannelFutureMap.keySet())
-            for (ChannelFuture f : usedOutboundChannelFutureMap.get(channelKey))
-                channels.add(f.getChannel());
+        for (Channel channel : channelIdle.keySet())
+            channels.add(channel);
 
         return channels;
     }
 
-    /**
-     * Checks if no connection is left for a given request
-     * 
-     * @param request the target for the channels
-     * @return true if there is no channel in use or idle
-     */
-    public boolean isEmpty(final HttpRequest request) {
-        final String channelKey = getChannelKey(request);
-        Queue<ChannelFuture> idleChannelQueue = getChannelQueue(idleOutboundChannelFutureMap, channelKey);
-        Queue<ChannelFuture> usedChannelQueue = getChannelQueue(usedOutboundChannelFutureMap, channelKey);
-        return usedChannelQueue.isEmpty() && idleChannelQueue.isEmpty();
-    }
-
-    private String getChannelKey(final HttpRequest request) {
-        return getChannelKey(Tools.getURL(request));
-    }
-
-    private String getChannelKey(final URL url) {
-        final String host = url.getHost();
-        final Integer port = url.getPort() == -1 ? 80 : url.getPort();
-        return new StringBuilder().append(host).append(":").append(port).toString();
-    }
-
-    private Queue<ChannelFuture> getChannelQueue(final Map<String, Queue<ChannelFuture>> channelFutureMap, final String channelKey) {
-        Queue<ChannelFuture> channelQueue = channelFutureMap.get(channelKey);
-
-        if (channelQueue == null) {
-            channelQueue = new LinkedList<ChannelFuture>();
-            channelFutureMap.put(channelKey, channelQueue);
-        }
-
-        return channelQueue;
-    }
-
-    private void dumpPool() {
+    @SuppressWarnings("unused")
+    private void dump() {
         StringBuilder dump = new StringBuilder();
-        dump.append("\nIn use channels:");
-        for (String s : usedOutboundChannelFutureMap.keySet()) {
-            for (ChannelFuture f : usedOutboundChannelFutureMap.get(s)) {
+        for (String channelKey : channels.keySet())
+            for (Channel channel : channels.get(channelKey)) {
                 dump.append("\n - ");
-                dump.append(s);
-                dump.append(" -> ");
-                dump.append(f.getChannel().getId());
-                dump.append(" connected ");
-                dump.append(f.getChannel().isConnected());
+                dump.append(channelKey);
+                dump.append("\n\t - Channel ");
+                dump.append(channel.getId());
+                dump.append(" - ");
+                if (channelIdle.get(channel)) {
+                    dump.append("idle");
+                } else {
+                    dump.append("in use");
+                }
             }
-        }
-        dump.append("\nIdle channels:");
-        for (String s : idleOutboundChannelFutureMap.keySet()) {
-            for (ChannelFuture f : idleOutboundChannelFutureMap.get(s)) {
-                dump.append("\n - ");
-                dump.append(s);
-                dump.append(" -> ");
-                dump.append(f.getChannel().getId());
-                dump.append(" connected ");
-                dump.append(f.getChannel().isConnected());
-            }
-        }
         log.debug(dump.toString());
     }
 
@@ -212,7 +207,7 @@ public class OutboundChannelPool {
 
             allChannels.add(channel);
             channel.getCloseFuture().addListener(new ChannelFutureListener() {
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     allChannels.remove(channel);
                 }
             });
