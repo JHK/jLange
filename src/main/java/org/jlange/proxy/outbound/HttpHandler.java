@@ -16,14 +16,14 @@ import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     private final Logger                log = LoggerFactory.getLogger(getClass());
     private final Channel               inboundChannel;
     private final List<ResponsePlugin>  responsePlugins;
     private final ChannelFutureListener messageReceivedListener;
 
-    HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins,
+    public HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins,
             final ChannelFutureListener messageReceivedListener) {
         this.inboundChannel = inboundChannel;
         this.responsePlugins = responsePlugins;

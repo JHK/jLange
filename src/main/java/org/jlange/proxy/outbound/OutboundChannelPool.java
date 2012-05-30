@@ -96,7 +96,7 @@ public class OutboundChannelPool {
         return f;
     }
 
-    public ChannelFutureListener getIdleConnectionListener(final HttpRequest request) {
+    public ChannelFutureListener setConnectionIdle(final HttpRequest request) {
         return new ChannelFutureListener() {
             public void operationComplete(final ChannelFuture future) {
                 String channelKey = getChannelKey(request);
