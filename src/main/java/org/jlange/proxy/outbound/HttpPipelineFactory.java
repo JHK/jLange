@@ -11,10 +11,10 @@ import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 
-    private final ChannelHandler handler;
+    private final ChannelHandler httpHandler;
 
-    public HttpPipelineFactory(final ChannelHandler handler) {
-        this.handler = handler;
+    public HttpPipelineFactory(final ChannelHandler httpHandler) {
+        this.httpHandler = httpHandler;
     }
 
     public ChannelPipeline getPipeline() throws Exception {
@@ -24,9 +24,8 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("handler", handler);
+        pipeline.addLast("handler", httpHandler);
 
         return pipeline;
     }
-
 }
