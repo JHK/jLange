@@ -5,16 +5,19 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.handler.timeout.IdleState;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class IdleShutdownHandler extends IdleStateHandler implements ChannelHandler {
 
+    public final static Timer timer = new HashedWheelTimer();
+    
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     public IdleShutdownHandler(int readerIdleTimeSeconds, int writerIdleTimeSeconds) {
-        super(new HashedWheelTimer(), readerIdleTimeSeconds, writerIdleTimeSeconds, 0);
+        super(timer, readerIdleTimeSeconds, writerIdleTimeSeconds, 0);
     }
 
     @Override

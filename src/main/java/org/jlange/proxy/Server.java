@@ -16,6 +16,7 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jlange.proxy.inbound.HttpPipelineFactory;
+import org.jlange.proxy.inbound.IdleShutdownHandler;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +60,8 @@ public class Server {
 
         OutboundChannelPool.getOutboundFactory().getChannels().close().awaitUninterruptibly();
         OutboundChannelPool.getOutboundFactory().releaseExternalResources();
+
+        IdleShutdownHandler.timer.stop();
 
         log.info("shutdown complete");
     }
