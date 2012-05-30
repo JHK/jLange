@@ -122,7 +122,9 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
 
                 List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
 
-                ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins);
+                ChannelFutureListener messageReceived = outboundChannelPool.setConnectionIdle(request);
+
+                ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins, messageReceived);
 
                 return new HttpPipelineFactory(outboundHandler);
             }
