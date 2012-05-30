@@ -21,6 +21,7 @@ import org.jboss.netty.channel.socket.ClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.SocketChannel;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jlange.proxy.inbound.strategy.ProxyStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,13 +88,13 @@ public class OutboundChannelPool {
         return f;
     }
 
-    public ChannelFuture getChannelFuture(final URL url, final ChannelPipelineFactoryFactory channelPipelineFactoryFactory) {
+    public ChannelFuture getChannelFuture(final URL url, final ProxyStrategy strategy) {
         final ChannelFuture f;
 
         final String channelKey = getChannelKey(url);
 
         if (channels.get(channelKey) == null || channels.get(channelKey).isEmpty()) {
-            f = getNewChannelFuture(url, channelPipelineFactoryFactory.getChannelPipelineFactory());
+            f = getNewChannelFuture(url, strategy.getChannelPipelineFactory());
         } else {
             ChannelFuture tmpF = null;
             for (Channel channel : channels.get(channelKey)) {
@@ -105,7 +106,7 @@ public class OutboundChannelPool {
             }
 
             if (tmpF == null)
-                f = getNewChannelFuture(url, channelPipelineFactoryFactory.getChannelPipelineFactory());
+                f = getNewChannelFuture(url, strategy.getChannelPipelineFactory());
             else
                 f = tmpF;
         }

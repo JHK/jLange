@@ -1,35 +1,22 @@
 package org.jlange.proxy.inbound;
 
 import java.net.URL;
-import java.util.List;
-
-import javax.net.ssl.SSLEngine;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.ssl.SslHandler;
 import org.jlange.proxy.Tools;
-import org.jlange.proxy.inbound.ssl.SecureSslContextFactory;
-import org.jlange.proxy.outbound.ChannelPipelineFactoryFactory;
-import org.jlange.proxy.outbound.HttpPipelineFactory;
+import org.jlange.proxy.inbound.strategy.HttpToHttp;
+import org.jlange.proxy.inbound.strategy.Passthrough;
+import org.jlange.proxy.inbound.strategy.ProxyStrategy;
 import org.jlange.proxy.outbound.OutboundChannelPool;
-import org.jlange.proxy.plugin.PluginProvider;
-import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,38 +45,15 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
 
-        // consider proxy requests and choose channel factory
-        final ChannelPipelineFactoryFactory outboundChannelPipelineFactoryFactory;
-        final ChannelFutureListener outboundChannelFutureListener;
-
+        // investigate proxy request and choose strategy for in and outbound channels
+        final ProxyStrategy strategy;
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
-            outboundChannelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
-            outboundChannelFutureListener = new ChannelFutureListener() {
-                public void operationComplete(final ChannelFuture f) {
-                    log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
-                    HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-                    HttpHeaders.setKeepAlive(response, true);
-                    inboundChannel.write(response);
-
-                    inboundChannel.setReadable(false);
-                    SSLEngine engine = SecureSslContextFactory.getServerContext().createSSLEngine();
-                    engine.setUseClientMode(false);
-                    inboundChannel.getPipeline().addFirst("ssl", new SslHandler(engine));
-                    inboundChannel.setReadable(true);
-                }
-            };
+            // strategy = new HttpsToHttp(inboundChannel, request, outboundChannelPool);
+            strategy = new Passthrough(inboundChannel);
         } else {
-            outboundChannelPipelineFactoryFactory = getHttpChannelPipelineFactoryFactory(request, inboundChannel);
-
-            // this needs to be here and not as connected listener on OutboundHandler, because the connection may not be new
-            outboundChannelFutureListener = new ChannelFutureListener() {
-                public void operationComplete(final ChannelFuture future) {
-                    final Channel outboundChannel = future.getChannel();
-                    log.info("Outboundchannel {} - sending request - {}", outboundChannel.getId(), request.getUri());
-                    outboundChannel.write(request);
-                }
-            };
+            strategy = new HttpToHttp(inboundChannel, request, outboundChannelPool);
         }
+        log.debug("Inboundchannel {} - chosen strategy: {}", inboundChannel.getId(), strategy.getClass().getName());
 
         // this proxy will always try to keep-alive connections
         request.removeHeader("Proxy-Connection");
@@ -98,10 +62,10 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
 
         // get a channel future for target host
         final URL url = Tools.getURL(request);
-        final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, outboundChannelPipelineFactoryFactory);
+        final ChannelFuture outboundChannelFuture = outboundChannelPool.getChannelFuture(url, strategy);
 
         // do what needs to be done when the outbound channel is connected
-        outboundChannelFuture.addListener(outboundChannelFutureListener);
+        outboundChannelFuture.addListener(strategy.getChannelActionListener());
     }
 
     @Override
@@ -111,19 +75,5 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         // close corresponding outbound channels
         outboundChannelPool.getChannels().close().awaitUninterruptibly();
 
-    }
-
-    private ChannelPipelineFactoryFactory getHttpChannelPipelineFactoryFactory(final HttpRequest request, final Channel inboundChannel) {
-        return new ChannelPipelineFactoryFactory() {
-            public ChannelPipelineFactory getChannelPipelineFactory() {
-                List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
-
-                ChannelFutureListener messageReceived = outboundChannelPool.getConnectionIdleFutureListener();
-
-                ChannelHandler outboundHandler = new org.jlange.proxy.outbound.HttpHandler(inboundChannel, responsePlugins, messageReceived);
-
-                return new HttpPipelineFactory(outboundHandler);
-            }
-        };
     }
 }

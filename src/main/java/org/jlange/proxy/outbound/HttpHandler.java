@@ -1,5 +1,6 @@
 package org.jlange.proxy.outbound;
 
+import java.util.LinkedList;
 import java.util.List;
 
 import org.jboss.netty.channel.Channel;
@@ -19,16 +20,19 @@ import org.slf4j.LoggerFactory;
 
 public class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger                log = LoggerFactory.getLogger(getClass());
-    private final Channel               inboundChannel;
-    private final List<ResponsePlugin>  responsePlugins;
-    private final ChannelFutureListener messageSentListener;
+    private final Logger                      log = LoggerFactory.getLogger(getClass());
+    private final Channel                     inboundChannel;
+    private final List<ResponsePlugin>        responsePlugins;
+    private final List<ChannelFutureListener> messageReceivedListener;
 
-    public HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins,
-            final ChannelFutureListener messageSentListener) {
+    public HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins) {
         this.inboundChannel = inboundChannel;
         this.responsePlugins = responsePlugins;
-        this.messageSentListener = messageSentListener;
+        this.messageReceivedListener = new LinkedList<ChannelFutureListener>();
+    }
+
+    public void addMessageReceivedListener(ChannelFutureListener messageReceivedListener) {
+        this.messageReceivedListener.add(messageReceivedListener);
     }
 
     @Override
@@ -66,12 +70,9 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         }
 
         // check closing outbound connection and keep inbound
-        final ChannelFutureListener messageSentListener;
         if (!HttpHeaders.isKeepAlive(response)) {
-            messageSentListener = ChannelFutureListener.CLOSE;
+            messageReceivedListener.add(ChannelFutureListener.CLOSE);
             HttpHeaders.setKeepAlive(response, true);
-        } else {
-            messageSentListener = this.messageSentListener;
         }
 
         // write response
@@ -79,6 +80,7 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         log.debug("Inboundchannel {} - {}", inboundChannel.getId(), response.toString());
         inboundChannel.write(response);
 
-        e.getFuture().addListener(messageSentListener);
+        for (ChannelFutureListener futureListener : messageReceivedListener)
+            e.getFuture().addListener(futureListener);
     }
 }
