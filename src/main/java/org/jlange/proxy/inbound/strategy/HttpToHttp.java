@@ -1,5 +1,7 @@
 package org.jlange.proxy.inbound.strategy;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 import org.jboss.netty.channel.Channel;
@@ -7,6 +9,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jlange.proxy.outbound.HttpHandler;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
@@ -45,7 +48,23 @@ public class HttpToHttp implements ProxyStrategy {
     public ChannelFutureListener getChannelActionListener() {
         return new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {
+
+                // update request
+                HttpHeaders.setKeepAlive(request, true);
+
+                try {
+                    final StringBuilder sb = new StringBuilder();
+                    final URL url = new URL(request.getUri());
+                    sb.append(url.getPath());
+                    if (url.getQuery() != null)
+                        sb.append("?").append(url.getQuery());
+                    request.setUri(sb.toString());
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
+
                 log.info("Outboundchannel {} - sending request - {}", future.getChannel().getId(), request.getUri());
+                log.debug("{}", request.toString());
                 future.getChannel().write(request);
             }
         };
