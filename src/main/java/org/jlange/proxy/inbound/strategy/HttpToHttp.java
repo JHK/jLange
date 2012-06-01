@@ -1,7 +1,5 @@
 package org.jlange.proxy.inbound.strategy;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
 
 import org.jboss.netty.channel.Channel;
@@ -16,6 +14,7 @@ import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.ResponsePlugin;
+import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,7 @@ public class HttpToHttp implements ProxyStrategy {
         List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
 
         HttpHandler handler = new HttpHandler(inboundChannel, responsePlugins);
-        handler.addMessageReceivedListener(outboundChannelPool.getConnectionIdleFutureListener());
+        handler.addMessageReceivedListener(outboundChannelPool.getConnectionIdleFutureListener(RemoteAddress.parseRequest(request)));
 
         return handler;
     }
@@ -48,22 +47,7 @@ public class HttpToHttp implements ProxyStrategy {
     public ChannelFutureListener getChannelActionListener() {
         return new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {
-
-                // update request
-                HttpHeaders.setKeepAlive(request, true);
-
-                try {
-                    final StringBuilder sb = new StringBuilder();
-                    final URL url = new URL(request.getUri());
-                    sb.append(url.getPath());
-                    if (url.getQuery() != null)
-                        sb.append("?").append(url.getQuery());
-                    request.setUri(sb.toString());
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                }
-
-                log.info("Outboundchannel {} - sending request - {}", future.getChannel().getId(), request.getUri());
+                log.info("Outboundchannel {} - sending request to {}", future.getChannel().getId(), HttpHeaders.getHost(request));
                 log.debug("{}", request.toString());
                 future.getChannel().write(request);
             }
