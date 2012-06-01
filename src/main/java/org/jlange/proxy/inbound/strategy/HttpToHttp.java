@@ -1,56 +1,92 @@
 package org.jlange.proxy.inbound.strategy;
 
-import java.util.List;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.outbound.HttpHandler;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
-import org.jlange.proxy.plugin.PluginProvider;
-import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.RemoteAddress;
+import org.jlange.proxy.util.ResponseReceivedListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpToHttp implements ProxyStrategy {
 
-    private final Logger              log = LoggerFactory.getLogger(getClass());
-    private final Channel             inboundChannel;
-    private final OutboundChannelPool outboundChannelPool;
-    private final HttpRequest         request;
+    private final Logger      log = LoggerFactory.getLogger(getClass());
+    private final HttpRequest request;
+    private final Channel     inboundChannel;
 
-    public HttpToHttp(final Channel inboundChannel, final HttpRequest request, final OutboundChannelPool outboundChannelPool) {
-        this.inboundChannel = inboundChannel;
+    public HttpToHttp(final HttpRequest request, final Channel inboundChannel) {
         this.request = request;
-        this.outboundChannelPool = outboundChannelPool;
+        this.inboundChannel = inboundChannel;
     }
 
-    private ChannelHandler getHandler() {
-        List<ResponsePlugin> responsePlugins = PluginProvider.getInstance().getResponsePlugins(request);
+    public void run() {
+        // change the request to an default browser like request
+        // this proxy will always try to keep-alive connections
+        request.removeHeader("Proxy-Connection");
+        HttpHeaders.setKeepAlive(request, true);
+        try {
+            final StringBuilder sb = new StringBuilder();
+            final URL url = new URL(request.getUri());
+            sb.append(url.getPath());
+            if (url.getQuery() != null)
+                sb.append("?").append(url.getQuery());
+            request.setUri(sb.toString());
+        } catch (MalformedURLException e2) {
+            log.error("Channel {} - {}\n" + e2.fillInStackTrace().toString(), inboundChannel.getId(), e2.toString());
+        }
 
-        HttpHandler handler = new HttpHandler(inboundChannel, responsePlugins);
-        handler.addMessageReceivedListener(outboundChannelPool.getConnectionIdleFutureListener(RemoteAddress.parseRequest(request)));
+        // define what needs to be done with the response
+        ResponseReceivedListener responseReceivedListener = new ResponseReceivedListener() {
+            public void responseReceived(HttpResponse response) {
+                // error handling for not connected inbound channel
+                if (!inboundChannel.isConnected()) {
+                    log.error("Channel {} - inbound channel closed before sending response", inboundChannel.getId());
+                    log.debug("Channel {} - {}", response.toString());
+                    return;
+                }
 
-        return handler;
-    }
+                HttpHeaders.setKeepAlive(response, true);
 
-    public ChannelPipelineFactory getChannelPipelineFactory() {
-        return new HttpPipelineFactory(getHandler());
-    }
-
-    public ChannelFutureListener getChannelActionListener() {
-        return new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                log.info("Outboundchannel {} - sending request to {}", future.getChannel().getId(), HttpHeaders.getHost(request));
-                log.debug("{}", request.toString());
-                future.getChannel().write(request);
+                // write response
+                log.info("Channel {} - sending response - {}", inboundChannel.getId(), response.getStatus().toString());
+                log.debug("Channel {} - {}", inboundChannel.getId(), response.toString());
+                inboundChannel.write(response);
             }
         };
+
+        // get a channel future for target host
+        final RemoteAddress address = RemoteAddress.parseRequest(request);
+        final OutboundChannelPool channelPool = OutboundChannelPool.getInstance();
+
+        ChannelFuture future = channelPool.getIdleChannelFuture(address);
+        if (future != null) {
+            HttpHandler handler = (HttpHandler) future.getChannel().getPipeline().get("handler");
+            handler.setRequest(request);
+            handler.setResponseReceivedListener(responseReceivedListener);
+        } else {
+            HttpHandler handler = new HttpHandler();
+            handler.setRequest(request);
+            handler.setResponseReceivedListener(responseReceivedListener);
+            future = channelPool.getNewChannelFuture(address, new HttpPipelineFactory(handler));
+        }
+
+        // send the request
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                log.info("Channel {} - sending request to {}", future.getChannel().getId(), HttpHeaders.getHost(request));
+                log.debug(request.toString());
+                future.getChannel().write(request);
+            }
+        });
     }
+
 }

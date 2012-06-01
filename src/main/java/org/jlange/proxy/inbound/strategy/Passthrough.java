@@ -8,23 +8,50 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.outbound.PassthroughHandler;
+import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Passthrough implements ProxyStrategy {
 
-    private final Logger  log = LoggerFactory.getLogger(getClass());
-    private final Channel inboundChannel;
+    private final Logger        log = LoggerFactory.getLogger(getClass());
+    private final RemoteAddress address;
+    private final Channel       inboundChannel;
 
-    public Passthrough(final Channel inboundChannel) {
+    public Passthrough(final HttpRequest request, final Channel inboundChannel) {
+        this.address = RemoteAddress.parseRequest(request);
         this.inboundChannel = inboundChannel;
     }
 
-    public ChannelPipelineFactory getChannelPipelineFactory() {
+    public void run() {
+        // build a new channel for outbound
+        final ChannelFuture future = OutboundChannelPool.getInstance().getNewChannelFuture(address, getChannelPipelineFactory());
+
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) throws Exception {
+                // respond that a remote channel has opened
+                log.info("Channel {} - sending response - connect ok", inboundChannel.getId());
+                inboundChannel.write(getResponse());
+                
+                // rebuild inbound channel
+                inboundChannel.setReadable(false);
+                for (String name : inboundChannel.getPipeline().getNames())
+                    inboundChannel.getPipeline().remove(name);
+                inboundChannel.getPipeline().addLast("passthrough", new PassthroughHandler(future.getChannel()));
+                inboundChannel.setReadable(true);
+                
+                log.info("Channel {} - passthrough to outboundchannel {}", inboundChannel.getId(), future.getChannel().getId());
+            }
+        });
+    }
+
+    private ChannelPipelineFactory getChannelPipelineFactory() {
         return new ChannelPipelineFactory() {
             public ChannelPipeline getPipeline() {
                 final ChannelPipeline pipeline = Channels.pipeline();
@@ -34,21 +61,9 @@ public class Passthrough implements ProxyStrategy {
         };
     }
 
-    public ChannelFutureListener getChannelActionListener() {
-        return new ChannelFutureListener() {
-            public void operationComplete(final ChannelFuture f) {
-                log.info("Inboundchannel {} - sending response - connect ok", inboundChannel.getId());
-                HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-                HttpHeaders.setKeepAlive(response, true);
-                inboundChannel.write(response);
-                inboundChannel.setReadable(false);
-
-                for (String name : inboundChannel.getPipeline().getNames())
-                    inboundChannel.getPipeline().remove(name);
-                inboundChannel.getPipeline().addLast("handler", new PassthroughHandler(f.getChannel()));
-                inboundChannel.setReadable(true);
-                log.info("Inboundchannel {} - passthrough to outboundchannel {}", inboundChannel.getId(), f.getChannel().getId());
-            }
-        };
+    private HttpResponse getResponse() {
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpHeaders.setKeepAlive(response, true);
+        return response;
     }
 }

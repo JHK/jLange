@@ -1,9 +1,5 @@
 package org.jlange.proxy.outbound;
 
-import java.util.LinkedList;
-import java.util.List;
-
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -11,76 +7,68 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.Tools;
+import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.ResponsePlugin;
+import org.jlange.proxy.util.RemoteAddress;
+import org.jlange.proxy.util.ResponseReceivedListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HttpHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger                      log = LoggerFactory.getLogger(getClass());
-    private final Channel                     inboundChannel;
-    private final List<ResponsePlugin>        responsePlugins;
-    private final List<ChannelFutureListener> messageReceivedListener;
+    private final Logger             log = LoggerFactory.getLogger(getClass());
+    private HttpRequest              request;
+    private ResponseReceivedListener responseReceivedListener;
 
-    public HttpHandler(final Channel inboundChannel, final List<ResponsePlugin> responsePlugins) {
-        this.inboundChannel = inboundChannel;
-        this.responsePlugins = responsePlugins;
-        this.messageReceivedListener = new LinkedList<ChannelFutureListener>();
+    public void setRequest(final HttpRequest request) {
+        this.request = request;
     }
-
-    public void addMessageReceivedListener(ChannelFutureListener messageReceivedListener) {
-        this.messageReceivedListener.add(messageReceivedListener);
+    
+    public void setResponseReceivedListener(final ResponseReceivedListener responseReceivedListener) {
+        this.responseReceivedListener = responseReceivedListener;
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.error("Outboundchannel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         Tools.closeOnFlush(e.getChannel());
-        Tools.closeOnFlush(inboundChannel);
+
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
+        responseReceivedListener.responseReceived(response);
     }
 
     @Override
     public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
-        log.info("Outboundchannel {} - closed", e.getChannel().getId());
+        log.info("Channel {} - closed", e.getChannel().getId());
+        OutboundChannelPool.getInstance().closeChannel(RemoteAddress.parseRequest(request), e.getChannel().getId());
     }
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpResponse response = (HttpResponse) e.getMessage();
-        final Channel outboundChannel = e.getChannel();
-        log.info("Outboundchannel {} - response received - {}", outboundChannel.getId(), response.getStatus().toString());
 
-        for (ResponsePlugin plugin : responsePlugins) {
-            if (plugin.isApplicable(response)) {
-                log.info("Outboundchannel {} - using plugin {}", outboundChannel.getId(), plugin.getClass().getName());
+        log.info("Channel {} - response received - {}", e.getChannel().getId(), response.getStatus().toString());
+
+        for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins()) {
+            if (plugin.isApplicable(request) && plugin.isApplicable(response)) {
+                log.info("Channel {} - using plugin {}", e.getChannel().getId(), plugin.getClass().getName());
                 plugin.run(response);
                 plugin.updateResponse(response);
             }
         }
 
-        // error handling for not connected inbound channel
-        if (!inboundChannel.isConnected()) {
-            log.error("Inboundchannel {} - inbound channel closed before sending response", inboundChannel.getId());
-            log.debug("Inboundchannel {} - {}", response.toString());
-            Tools.closeOnFlush(outboundChannel);
-            return;
-        }
+        responseReceivedListener.responseReceived(response);
 
-        // check closing outbound connection and keep inbound
-        if (!HttpHeaders.isKeepAlive(response)) {
-            messageReceivedListener.add(ChannelFutureListener.CLOSE);
-            HttpHeaders.setKeepAlive(response, true);
-        }
-
-        // write response
-        log.info("Inboundchannel {} - sending response - {}", inboundChannel.getId(), response.getStatus().toString());
-        log.debug("Inboundchannel {} - {}", inboundChannel.getId(), response.toString());
-        inboundChannel.write(response);
-
-        for (ChannelFutureListener futureListener : messageReceivedListener)
-            e.getFuture().addListener(futureListener);
+        if (HttpHeaders.isKeepAlive(response))
+            OutboundChannelPool.getInstance().setChannelIdle(RemoteAddress.parseRequest(request), e.getFuture());
+        else
+            e.getFuture().addListener(ChannelFutureListener.CLOSE);
     }
 }

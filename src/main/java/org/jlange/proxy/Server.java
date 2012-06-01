@@ -58,8 +58,8 @@ public class Server {
         inboundFactory.getChannels().close().awaitUninterruptibly();
         inboundFactory.releaseExternalResources();
 
-        OutboundChannelPool.getOutboundFactory().getChannels().close().awaitUninterruptibly();
-        OutboundChannelPool.getOutboundFactory().releaseExternalResources();
+        OutboundChannelPool.getInstance().getOutboundFactory().getChannels().close().awaitUninterruptibly();
+        OutboundChannelPool.getInstance().getOutboundFactory().releaseExternalResources();
 
         IdleShutdownHandler.timer.stop();
 

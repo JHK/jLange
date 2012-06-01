@@ -25,28 +25,35 @@ import org.slf4j.LoggerFactory;
 
 public class OutboundChannelPool {
 
-    private static final OutboundSocketChannelFactory outboundFactory = new OutboundSocketChannelFactory(Executors.newCachedThreadPool(),
-                                                                              Executors.newCachedThreadPool());
+    private static OutboundChannelPool instance;
 
-    public static OutboundSocketChannelFactory getOutboundFactory() {
-        return outboundFactory;
+    public static OutboundChannelPool getInstance() {
+        if (instance == null)
+            instance = new OutboundChannelPool();
+        return instance;
     }
 
-    private final Logger                      log = LoggerFactory.getLogger(getClass());
+    private final Logger                       log = LoggerFactory.getLogger(getClass());
+    private final OutboundSocketChannelFactory outboundFactory;
 
     /**
      * keeps track of used/idle channel ids
      */
-    private final ChannelIdPool               channelIdPool;
+    private final ChannelIdPool                channelIdPool;
 
     /**
      * holds the most recent future to a channel id
      */
-    private final Map<Integer, ChannelFuture> channelFuture;
+    private final Map<Integer, ChannelFuture>  channelFuture;
 
-    public OutboundChannelPool() {
+    private OutboundChannelPool() {
         channelFuture = new HashMap<Integer, ChannelFuture>();
         channelIdPool = new ChannelIdPool();
+        outboundFactory = new OutboundSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
+    }
+
+    public OutboundSocketChannelFactory getOutboundFactory() {
+        return outboundFactory;
     }
 
     public ChannelFuture getNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
@@ -58,17 +65,11 @@ public class OutboundChannelPool {
 
         // connect to remote host
         final ChannelFuture f = outboundClient.connect(new InetSocketAddress(address.getHost(), address.getPort()));
-        log.info("Outboundchannel {} - created", f.getChannel().getId());
-
-        // cleanup channels on close
-        f.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                channelIdPool.removeChannelId(address, future.getChannel().getId());
-            }
-        });
+        log.info("Channel {} - created", f.getChannel().getId());
 
         channelIdPool.addUsedChannelId(address, f.getChannel().getId());
         channelFuture.put(f.getChannel().getId(), f);
+        channelIdPool.dump();
 
         return f;
     }
@@ -78,44 +79,37 @@ public class OutboundChannelPool {
         final Integer channelId = channelIdPool.getIdleChannelId(address);
 
         // get and remove channel from idle channels
-        final ChannelFuture fut = channelFuture.get(channelId);
+        final ChannelFuture future = channelFuture.get(channelId);
 
         // set channel as used
         channelIdPool.useChannelId(address, channelId);
+        channelIdPool.dump();
 
-        if (fut != null)
-            log.info("Outboundchannel {} - reuse existing connection", channelId);
-
-        return fut;
+        if (future != null && future.getChannel().isConnected()) {
+            log.info("Channel {} - reuse existing connection", channelId);
+            return future;
+        } else
+            return null;
     }
 
-    public ChannelFutureListener getConnectionIdleFutureListener(final RemoteAddress address) {
-        return new ChannelFutureListener() {
-            public void operationComplete(final ChannelFuture future) {
-                channelIdPool.idleChannelId(address, future.getChannel().getId());
-                channelFuture.put(future.getChannel().getId(), future);
-            }
-        };
+    public void setChannelIdle(final RemoteAddress address, final ChannelFuture future) {
+        log.info("Channel {} - channel is idle", future.getChannel().getId());
+        channelIdPool.idleChannelId(address, future.getChannel().getId());
+        channelFuture.put(future.getChannel().getId(), future);
+        channelIdPool.dump();
     }
 
-    /**
-     * Gets all outbound channels, idle and in use
-     * 
-     * @return a {@link ChannelGroup} of all channels
-     */
-    public ChannelGroup getChannels() {
-        final ChannelGroup channels = new DefaultChannelGroup();
-
-        for (ChannelFuture future : channelFuture.values())
-            channels.add(future.getChannel());
-
-        return channels;
+    public void closeChannel(final RemoteAddress address, final Integer channelId) {
+        log.info("Channel {} - closed, remove from pool", channelId);
+        channelIdPool.removeChannelId(address, channelId);
+        channelFuture.remove(channelId);
+        channelIdPool.dump();
     }
 
     /***
      * A class extending {@link NioServerSocketChannelFactory} to keep track of opened client channels.
      */
-    public static class OutboundSocketChannelFactory extends NioClientSocketChannelFactory implements ClientSocketChannelFactory {
+    public class OutboundSocketChannelFactory extends NioClientSocketChannelFactory implements ClientSocketChannelFactory {
 
         private final ChannelGroup allChannels;
 
@@ -142,7 +136,6 @@ public class OutboundChannelPool {
         public ChannelGroup getChannels() {
             return allChannels;
         }
-
     }
 
     /**
@@ -158,62 +151,90 @@ public class OutboundChannelPool {
             usedChannels = new HashMap<RemoteAddress, Queue<Integer>>();
         }
 
-        public void addUsedChannelId(final RemoteAddress channelKey, final Integer channelId) {
-            Queue<Integer> usedChannelIds = getUsedChannelIds(channelKey);
+        public void addUsedChannelId(final RemoteAddress address, final Integer channelId) {
+            Queue<Integer> usedChannelIds = getUsedChannelIds(address);
             usedChannelIds.add(channelId);
         }
 
-        public void removeChannelId(final RemoteAddress channelKey, final Integer channelId) {
-            getUsedChannelIds(channelKey).remove(channelId);
-            getIdleChannelIds(channelKey).remove(channelId);
+        public void removeChannelId(final RemoteAddress address, final Integer channelId) {
+            getUsedChannelIds(address).remove(channelId);
+            getIdleChannelIds(address).remove(channelId);
         }
 
-        public Integer getIdleChannelId(final RemoteAddress channelKey) {
-            return getIdleChannelIds(channelKey).peek();
+        public Integer getIdleChannelId(final RemoteAddress address) {
+            return getIdleChannelIds(address).peek();
         }
 
         /**
          * Moves a channel id from idle to used queue
          */
-        public void useChannelId(final RemoteAddress channelKey, final Integer channelId) {
-            Queue<Integer> idleChannelIds = getIdleChannelIds(channelKey);
-            idleChannelIds.remove(channelId);
-
-            Queue<Integer> usedChannelIds = getUsedChannelIds(channelKey);
-            usedChannelIds.add(channelId);
+        public void useChannelId(final RemoteAddress address, final Integer channelId) {
+            Queue<Integer> idleChannelIds = getIdleChannelIds(address);
+            if (idleChannelIds.remove(channelId)) {
+                Queue<Integer> usedChannelIds = getUsedChannelIds(address);
+                usedChannelIds.add(channelId);
+            }
         }
 
         /**
          * Moves a channel id from used to idle queue
          */
-        public void idleChannelId(final RemoteAddress channelKey, final Integer channelId) {
-            Queue<Integer> usedChannelIds = getUsedChannelIds(channelKey);
-            usedChannelIds.remove(channelId);
-
-            Queue<Integer> idleChannelIds = getIdleChannelIds(channelKey);
-            idleChannelIds.add(channelId);
+        public void idleChannelId(final RemoteAddress address, final Integer channelId) {
+            Queue<Integer> usedChannelIds = getUsedChannelIds(address);
+            if (usedChannelIds.remove(channelId)) {
+                Queue<Integer> idleChannelIds = getIdleChannelIds(address);
+                idleChannelIds.add(channelId);
+            }
         }
 
-        private Queue<Integer> getUsedChannelIds(final RemoteAddress channelKey) {
-            Queue<Integer> usedChannelIds = usedChannels.get(channelKey);
+        private Queue<Integer> getUsedChannelIds(final RemoteAddress address) {
+            Queue<Integer> usedChannelIds = usedChannels.get(address);
 
             if (usedChannelIds == null) {
                 usedChannelIds = new LinkedList<Integer>();
-                usedChannels.put(channelKey, usedChannelIds);
+                usedChannels.put(address, usedChannelIds);
             }
 
             return usedChannelIds;
         }
 
-        private Queue<Integer> getIdleChannelIds(final RemoteAddress channelKey) {
-            Queue<Integer> idleChannelIds = idleChannels.get(channelKey);
+        private Queue<Integer> getIdleChannelIds(final RemoteAddress address) {
+            Queue<Integer> idleChannelIds = idleChannels.get(address);
 
             if (idleChannelIds == null) {
                 idleChannelIds = new LinkedList<Integer>();
-                idleChannels.put(channelKey, idleChannelIds);
+                idleChannels.put(address, idleChannelIds);
             }
 
             return idleChannelIds;
+        }
+
+        public void dump() {
+            if (!log.isDebugEnabled())
+                return;
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("\nidle:");
+            for (RemoteAddress address : idleChannels.keySet()) {
+                sb.append("\n");
+                sb.append(address.toString());
+                for (Integer i : getIdleChannelIds(address)) {
+                    sb.append("\n\t -> ");
+                    sb.append(i);
+                }
+            }
+
+            sb.append("\nused:");
+            for (RemoteAddress address : usedChannels.keySet()) {
+                sb.append("\n");
+                sb.append(address.toString());
+                for (Integer i : getUsedChannelIds(address)) {
+                    sb.append("\n\t -> ");
+                    sb.append(i);
+                }
+            }
+
+            log.debug(sb.toString());
         }
     }
 }

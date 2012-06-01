@@ -17,17 +17,16 @@ import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpsToHttp extends HttpToHttp implements ProxyStrategy {
+public class HttpsToHttp {
 
     private final Logger  log = LoggerFactory.getLogger(getClass());
     private final Channel inboundChannel;
     
     public HttpsToHttp(Channel inboundChannel, HttpRequest request, OutboundChannelPool outboundChannelPool) {
-        super(inboundChannel, request, outboundChannelPool);
+//        super(inboundChannel, request, outboundChannelPool);
         this.inboundChannel = inboundChannel;
     }
 
-    @Override
     public ChannelFutureListener getChannelActionListener() {
         return new ChannelFutureListener() {
             public void operationComplete(ChannelFuture future) {
