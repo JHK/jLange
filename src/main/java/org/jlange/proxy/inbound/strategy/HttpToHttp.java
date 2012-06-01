@@ -5,7 +5,6 @@ import java.net.URL;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -72,21 +71,15 @@ public class HttpToHttp implements ProxyStrategy {
             HttpHandler handler = (HttpHandler) future.getChannel().getPipeline().get("handler");
             handler.setRequest(request);
             handler.setResponseReceivedListener(responseReceivedListener);
+            handler.sendRequest(future, request);
         } else {
             HttpHandler handler = new HttpHandler();
             handler.setRequest(request);
             handler.setResponseReceivedListener(responseReceivedListener);
             future = channelPool.getNewChannelFuture(address, new HttpPipelineFactory(handler));
+            handler.sendRequest(future, request);
         }
 
-        // send the request
-        future.addListener(new ChannelFutureListener() {
-            public void operationComplete(ChannelFuture future) {
-                log.info("Channel {} - sending request to {}", future.getChannel().getId(), HttpHeaders.getHost(request));
-                log.debug(request.toString());
-                future.getChannel().write(request);
-            }
-        });
     }
 
 }

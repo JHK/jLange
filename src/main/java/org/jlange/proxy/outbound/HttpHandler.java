@@ -1,5 +1,6 @@
 package org.jlange.proxy.outbound;
 
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -30,9 +31,19 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
     public void setRequest(final HttpRequest request) {
         this.request = request;
     }
-    
+
     public void setResponseReceivedListener(final ResponseReceivedListener responseReceivedListener) {
         this.responseReceivedListener = responseReceivedListener;
+    }
+
+    public void sendRequest(final ChannelFuture future, final HttpRequest request) {
+        future.addListener(new ChannelFutureListener() {
+            public void operationComplete(ChannelFuture future) {
+                log.info("Channel {} - sending request to {}", future.getChannel().getId(), HttpHeaders.getHost(request));
+                log.debug(request.toString());
+                future.getChannel().write(request);
+            }
+        });
     }
 
     @Override
