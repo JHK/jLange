@@ -1,4 +1,4 @@
-package org.jlange.proxy.inbound.strategy;
+package org.jlange.proxy.strategy;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;

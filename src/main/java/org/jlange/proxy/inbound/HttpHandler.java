@@ -9,9 +9,9 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jlange.proxy.Tools;
-import org.jlange.proxy.inbound.strategy.HttpToHttp;
-import org.jlange.proxy.inbound.strategy.Passthrough;
-import org.jlange.proxy.inbound.strategy.ProxyStrategy;
+import org.jlange.proxy.strategy.HttpToHttp;
+import org.jlange.proxy.strategy.Passthrough;
+import org.jlange.proxy.strategy.ProxyStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

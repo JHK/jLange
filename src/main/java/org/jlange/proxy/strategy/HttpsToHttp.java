@@ -1,4 +1,4 @@
-package org.jlange.proxy.inbound.strategy;
+package org.jlange.proxy.strategy;
 
 import javax.net.ssl.SSLEngine;
 
