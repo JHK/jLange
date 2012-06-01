@@ -45,6 +45,11 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
 
+        // this proxy will always try to keep-alive connections
+        log.info("Inboundchannel {} - request received - {}", inboundChannel.getId(), request.getUri());
+        log.debug(request.toString());
+        request.removeHeader("Proxy-Connection");
+
         // investigate proxy request and choose strategy for in and outbound channels
         final ProxyStrategy strategy;
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
@@ -54,11 +59,6 @@ public class HttpHandler extends SimpleChannelUpstreamHandler implements Channel
             strategy = new HttpToHttp(inboundChannel, request, outboundChannelPool);
         }
         log.debug("Inboundchannel {} - chosen strategy: {}", inboundChannel.getId(), strategy.getClass().getName());
-
-        // this proxy will always try to keep-alive connections
-        request.removeHeader("Proxy-Connection");
-        log.info("Inboundchannel {} - request received - {}", inboundChannel.getId(), request.getUri());
-        log.debug(request.toString());
 
         // get a channel future for target host
         final URL url = Tools.getURL(request);
