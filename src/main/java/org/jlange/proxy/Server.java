@@ -58,8 +58,7 @@ public class Server {
         inboundFactory.getChannels().close().awaitUninterruptibly();
         inboundFactory.releaseExternalResources();
 
-        OutboundChannelPool.getInstance().getOutboundFactory().getChannels().close().awaitUninterruptibly();
-        OutboundChannelPool.getInstance().getOutboundFactory().releaseExternalResources();
+        OutboundChannelPool.getNioClientSocketChannelFactory().releaseExternalResources();
 
         IdleShutdownHandler.timer.stop();
 
