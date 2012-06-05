@@ -20,8 +20,9 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
 
     private final Logger        log           = LoggerFactory.getLogger(getClass());
     private final File          KEYSTORE_FILE = new File("jlange_keystore.jks");
-    private final String        AL            = "jLange";
-    private static final String PASS          = "Choose your password";
+    private final String        ALIAS         = "jLange";
+    private final String        DNAME         = "CN=jLange, OU=Fachbereich Informatik, O=Universität Hamburg, L=Hamburg, ST=Hamburg, C=de";
+    private static final String PASS          = "laZ8zah0";
 
     public SelfSignedKeyStoreManager() {
         this(true);
@@ -37,10 +38,10 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
             return;
         }
 
-        nativeCall("keytool", "-genkey", "-alias", AL, "-keysize", "4096", "-validity", "36500", "-keyalg", "RSA", "-dname", "CN=jLange",
+        nativeCall("keytool", "-genkey", "-alias", ALIAS, "-keysize", "4096", "-validity", "36500", "-keyalg", "RSA", "-dname", DNAME,
                 "-keypass", PASS, "-storepass", PASS, "-keystore", KEYSTORE_FILE.getName());
 
-        nativeCall("keytool", "-exportcert", "-alias", AL, "-keystore", KEYSTORE_FILE.getName(), "-storepass", PASS, "-file", "jlange_cert");
+        nativeCall("keytool", "-exportcert", "-alias", ALIAS, "-keystore", KEYSTORE_FILE.getName(), "-storepass", PASS, "-file", "jlange_cert");
     }
 
     public String getBase64Cert() {
