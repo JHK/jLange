@@ -13,7 +13,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jlange.proxy.inbound.ssl.SecureSslContextFactory;
+import org.jlange.proxy.inbound.ssl.KeyStoreManager;
+import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
+import org.jlange.proxy.inbound.ssl.SslContextFactory;
 import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +63,9 @@ public class HttpsToHttp extends HttpToHttp implements ProxyStrategy {
                     inboundChannel.getPipeline().remove("deflater");
 
                     // build and set SSL handler
-                    SSLEngine engine = SecureSslContextFactory.getServerContext().createSSLEngine();
+                    KeyStoreManager ksm = new SelfSignedKeyStoreManager();
+                    SslContextFactory scf = new SslContextFactory(ksm);
+                    SSLEngine engine = scf.getServerContext().createSSLEngine();
                     engine.setUseClientMode(false);
                     inboundChannel.getPipeline().addFirst("ssl", new SslHandler(engine));
 

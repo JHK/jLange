@@ -1,24 +1,20 @@
 package org.jlange.proxy.inbound;
 
-import javax.net.ssl.SSLEngine;
-
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.ssl.SslHandler;
-import org.jlange.proxy.inbound.ssl.SecureSslContextFactory;
 
 public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
     public ChannelPipeline getPipeline() throws Exception {
         final ChannelPipeline pipeline = Channels.pipeline();
 
-        SSLEngine engine = SecureSslContextFactory.getServerContext().createSSLEngine();
-        engine.setUseClientMode(false);
-
-        pipeline.addLast("ssl", new SslHandler(engine));
+        // SSLEngine engine = SecureSslContextFactory.getServerContext().createSSLEngine();
+        // engine.setUseClientMode(false);
+        //
+        // pipeline.addLast("ssl", new SslHandler(engine));
 
         // On top of the SSL handler, add the text line codec.
         // pipeline.addLast("framer", new DelimiterBasedFrameDecoder(8192, Delimiters.lineDelimiter()));
