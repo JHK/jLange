@@ -120,7 +120,7 @@ public class OutboundChannelPool {
             isChannelIdle.put(channelId, false);
         }
 
-        public void removeChannelId(final Integer channelId) {
+        public synchronized void removeChannelId(final Integer channelId) {
             for (RemoteAddress address : channels.keySet())
                 if (channels.get(address).remove(channelId)) {
                     if (channels.get(address).isEmpty())
