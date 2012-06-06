@@ -21,7 +21,7 @@ public class PassthroughHandler extends SimpleChannelUpstreamHandler {
     }
 
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
-        log.info("Channel {} - message received", e.getChannel().getId());
+        log.debug("Channel {} - message received", e.getChannel().getId());
 
         final ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
 

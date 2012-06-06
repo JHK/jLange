@@ -13,7 +13,6 @@
  */
 package org.jlange.proxy.outbound;
 
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -25,12 +24,6 @@ import org.jlange.proxy.inbound.IdleShutdownHandler;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 
-    private final ChannelHandler httpHandler;
-
-    public HttpPipelineFactory(final ChannelHandler httpHandler) {
-        this.httpHandler = httpHandler;
-    }
-
     public ChannelPipeline getPipeline() throws Exception {
         ChannelPipeline pipeline = Channels.pipeline();
 
@@ -38,8 +31,8 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("idle", new IdleShutdownHandler(0,30));
-        pipeline.addLast("handler", httpHandler);
+        pipeline.addLast("idle", new IdleShutdownHandler(0, 30));
+        pipeline.addLast("handler", new HttpPluginHandler());
 
         return pipeline;
     }
