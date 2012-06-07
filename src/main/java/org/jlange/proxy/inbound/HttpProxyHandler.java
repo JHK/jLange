@@ -38,7 +38,7 @@ import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
