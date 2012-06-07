@@ -30,6 +30,7 @@ import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jlange.proxy.inbound.ProxyPipelineFactory;
 import org.jlange.proxy.inbound.IdleShutdownHandler;
+import org.jlange.proxy.inbound.SpdyServerPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +63,16 @@ public class Server {
         Channel channel = inbound.bind(new InetSocketAddress(port));
         inboundFactory.addChannel(channel);
 
+        final ServerBootstrap inbound2 = new ServerBootstrap(inboundFactory);
+        inbound2.setPipelineFactory(new SpdyServerPipelineFactory());
+        inbound2.setOption("child.tcpNoDelay", true);
+        inbound2.setOption("child.keepAlive", true);
+
+        Channel channel2 = inbound2.bind(new InetSocketAddress(port+1));
+        inboundFactory.addChannel(channel2);
+        
         log.info("started on port {}", port);
+        log.info("started on port {}", port+1);
     }
 
     public void stop() {
