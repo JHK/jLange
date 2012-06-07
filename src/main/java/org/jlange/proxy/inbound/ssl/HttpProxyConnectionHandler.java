@@ -57,7 +57,8 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
     }
 
     public HttpProxyConnectionHandler(final SSLContext context) {
-        this.context = context;
+//        this.context = context;
+        this.context = null;
     }
 
     @Override
