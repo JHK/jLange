@@ -34,7 +34,7 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
     private final Logger        log           = LoggerFactory.getLogger(getClass());
     private final File          KEYSTORE_FILE = new File("jlange_keystore.jks");
     private final String        ALIAS         = "jLange";
-    private final String        DNAME         = "CN=jLange, OU=Fachbereich Informatik, O=Universität Hamburg, L=Hamburg, ST=Hamburg, C=de";
+    private final String        DNAME         = "CN=*, OU=Masterthesis, O=Julian Knocke, L=Hamburg, ST=Hamburg, C=de";
     private static final String PASS          = "laZ8zah0";
 
     public SelfSignedKeyStoreManager() {
@@ -99,8 +99,7 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
     }
 
     public TrustManager[] getTrustManagers() {
-        // We don't use client authentication, so we should not need trust
-        // managers.
+        // We don't use client authentication, so we should not need trust managers.
         return null;
     }
 

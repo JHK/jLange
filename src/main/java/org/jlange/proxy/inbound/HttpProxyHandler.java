@@ -57,7 +57,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpRequest request = (HttpRequest) e.getMessage();
         final RemoteAddress address = RemoteAddress.parseRequest(request);
 

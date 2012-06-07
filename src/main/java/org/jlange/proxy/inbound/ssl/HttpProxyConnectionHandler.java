@@ -78,9 +78,7 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
             outboundFuture.addListener(new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture outboundFuture) {
                     log.info("Channel {} - channel opened - send ok", e.getChannel().getId());
-                    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-                    HttpHeaders.setKeepAlive(response, true);
-                    final ChannelFuture inboundFuture = ctx.getChannel().write(response);
+                    final ChannelFuture inboundFuture = ctx.getChannel().write(getHttpResponseOk());
                     if (context == null) {
                         inboundFuture.addListener(getPassthroughChannelFutureListener(outboundFuture.getChannel()));
                     } else {
@@ -92,6 +90,12 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
         } else {
             ctx.sendUpstream(e);
         }
+    }
+
+    private HttpResponse getHttpResponseOk() {
+        final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        HttpHeaders.setKeepAlive(response, true);
+        return response;
     }
 
     private ChannelPipelineFactory getPipelineFactory(final Channel inboundChannel) {

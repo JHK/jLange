@@ -31,7 +31,7 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
     private final SSLContext context;
 
     public ProxyPipelineFactory() {
-        KeyStoreManager ksm = new SelfSignedKeyStoreManager(false);
+        KeyStoreManager ksm = new SelfSignedKeyStoreManager();
         SslContextFactory scf = new SslContextFactory(ksm);
         this.context = scf.getServerContext();
     }
