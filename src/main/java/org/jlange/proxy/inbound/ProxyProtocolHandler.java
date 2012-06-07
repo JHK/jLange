@@ -16,8 +16,10 @@ package org.jlange.proxy.inbound;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
+import org.eclipse.jetty.npn.NextProtoNego;
 import org.htmlparser.http.HttpHeader;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -37,6 +39,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.jlange.proxy.inbound.ssl.HttpOrSpdyDecoder;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.outbound.PassthroughHandler;
@@ -52,22 +55,22 @@ import org.slf4j.LoggerFactory;
  * {@link HttpHeader} of the {@link HttpResponse}.
  */
 public class ProxyProtocolHandler extends SimpleChannelHandler implements ChannelHandler {
-    private final Logger    log = LoggerFactory.getLogger(getClass());
+    private final Logger     log = LoggerFactory.getLogger(getClass());
 
-    private final SSLEngine engine;
+    private final SSLContext context;
 
     /**
      * {@link RemoteAddress} to which the proxy is connected
      */
-    private RemoteAddress   address;
-    private Boolean         proxyKeepAlive;
+    private RemoteAddress    address;
+    private Boolean          proxyKeepAlive;
 
     public ProxyProtocolHandler() {
         this(null);
     }
 
-    public ProxyProtocolHandler(final SSLEngine engine) {
-        this.engine = engine;
+    public ProxyProtocolHandler(final SSLContext context) {
+        this.context = context;
         this.address = null;
         this.proxyKeepAlive = true;
     }
@@ -80,21 +83,23 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
             log.info("Channel {} - connect received - open a new channel to {}", e.getChannel().getId(), request.getUri());
             address = RemoteAddress.parseRequest(request);
             // TODO: outbound MITM connection is still unencrypted, try to encrypt it
-            if (engine != null && address.getPort() == 443)
+            if (context != null && address.getPort() == 443)
                 address = new RemoteAddress(address.getHost(), 80);
             final ChannelPipelineFactory factory = getPipelineFactory(e.getChannel());
             final ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getNewChannelFuture(address, factory);
 
             outboundFuture.addListener(new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture outboundFuture) {
-                    log.debug("Channel {} - channel opened - send ok", e.getChannel().getId());
+                    log.info("Channel {} - channel opened - send ok", e.getChannel().getId());
                     final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
                     HttpHeaders.setKeepAlive(response, true);
                     final ChannelFuture inboundFuture = ctx.getChannel().write(response);
-                    if (engine == null)
-                        inboundFuture.addListener(getPassthroughChannelFutureListener(outboundFuture));
-                    else
-                        inboundFuture.addListener(getMITMChannelFutureListener(outboundFuture));
+                    if (context == null) {
+                        inboundFuture.addListener(getPassthroughChannelFutureListener(outboundFuture.getChannel()));
+                    } else {
+                        inboundFuture.addListener(getMITMChannelFutureListener());
+                        OutboundChannelPool.getInstance().setChannelIdle(outboundFuture);
+                    }
                 }
             });
 
@@ -121,7 +126,7 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
     private ChannelPipelineFactory getPipelineFactory(final Channel inboundChannel) {
         final ChannelPipelineFactory factory;
 
-        if (engine == null) {
+        if (context == null) {
             factory = new ChannelPipelineFactory() {
                 public ChannelPipeline getPipeline() {
                     ChannelPipeline pipeline = Channels.pipeline();
@@ -152,22 +157,30 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
         }
     }
 
-    private ChannelFutureListener getMITMChannelFutureListener(final ChannelFuture outboundFuture) {
+    private ChannelFutureListener getMITMChannelFutureListener() {
         return new ChannelFutureListener() {
             public void operationComplete(final ChannelFuture inboundFuture) {
                 log.debug("Channel {} - update pipeline (MITM)", inboundFuture.getChannel().getId());
                 final ChannelPipeline pipe = inboundFuture.getChannel().getPipeline();
                 pipe.getChannel().setReadable(false);
-                pipe.addFirst("ssl", new SslHandler(engine));
-                pipe.remove("deflater");
-                pipe.remove("idle");
+                while (pipe.getFirst() != null)
+                    pipe.removeFirst();
+
+                SSLEngine engine = context.createSSLEngine();
+                engine.setUseClientMode(false);
+
+                NextProtoNego.put(engine, new SimpleServerProvider());
+                if (log.isDebugEnabled())
+                    NextProtoNego.debug = true;
+
+                pipe.addLast("ssl", new SslHandler(engine));
+                pipe.addLast("http_or_spdy", new HttpOrSpdyDecoder(new ProxyHandler()));
                 pipe.getChannel().setReadable(true);
-                OutboundChannelPool.getInstance().setChannelIdle(outboundFuture);
             }
         };
     }
 
-    private ChannelFutureListener getPassthroughChannelFutureListener(final ChannelFuture outboundFuture) {
+    private ChannelFutureListener getPassthroughChannelFutureListener(final Channel outboundChannel) {
         return new ChannelFutureListener() {
             public void operationComplete(ChannelFuture inboundFuture) {
                 log.debug("Channel {} - update pipeline (passthrough)", inboundFuture.getChannel().getId());
@@ -175,7 +188,7 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
                 inboundChannel.setReadable(false);
                 while (inboundChannel.getPipeline().getFirst() != null)
                     inboundChannel.getPipeline().removeFirst();
-                inboundChannel.getPipeline().addLast("passthrough", new PassthroughHandler(outboundFuture.getChannel()));
+                inboundChannel.getPipeline().addLast("passthrough", new PassthroughHandler(outboundChannel));
                 inboundChannel.setReadable(true);
             }
         };

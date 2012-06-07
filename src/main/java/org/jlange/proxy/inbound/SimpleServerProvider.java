@@ -20,15 +20,17 @@ import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
 
 public class SimpleServerProvider implements ServerProvider {
 
-    private String selectedProtocol = null;
+    public static final String HTTP_1_1         = "http/1.1";
+    public static final String SPDY_2           = "spdy/2";
+
+    private String             selectedProtocol = null;
 
     public void unsupported() {
-        // if unsupported, default to http/1.1
-        selectedProtocol = "http/1.1";
+        selectedProtocol = HTTP_1_1;
     }
 
     public List<String> protocols() {
-        return Arrays.asList("spdy/2", "http/1.1");
+        return Arrays.asList(SPDY_2, HTTP_1_1);
     }
 
     public void protocolSelected(String protocol) {
