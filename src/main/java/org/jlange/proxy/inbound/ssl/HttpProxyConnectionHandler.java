@@ -11,16 +11,12 @@
  * 
  * You should have received a copy of the GNU General Public License along with jLange. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.jlange.proxy.inbound;
-
-import java.net.MalformedURLException;
-import java.net.URL;
+package org.jlange.proxy.inbound.ssl;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
 import org.eclipse.jetty.npn.NextProtoNego;
-import org.htmlparser.http.HttpHeader;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -30,7 +26,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -39,7 +35,8 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jlange.proxy.inbound.ssl.HttpOrSpdyDecoder;
+import org.jlange.proxy.inbound.HttpProxyHandler;
+import org.jlange.proxy.inbound.SimpleServerProvider;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.outbound.PassthroughHandler;
@@ -48,31 +45,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link HttpRequest}s send to proxies look slightly different than direct requests to webserver. This hander takes care of these
- * differences and reforms the {@link HttpRequest} to look like a direct connection to a webserver. If the target is a SSL encrypted
- * webserver this handler builds a passthrough or opens the SSL connection, depending if there is a {@link SSLEngine} set at creation time.
- * Additionally this handler takes care of {@code Proxy-Connection} {@link HttpHeader} in the {@link HttpRequest} and sets the respective
- * {@link HttpHeader} of the {@link HttpResponse}.
+ * If the target is a SSL encrypted webserver this handler builds a passthrough or opens the SSL connection, depending if there is a
+ * {@link SSLContext} set at creation time. This handler will change the pipeline of the current channel.
  */
-public class ProxyProtocolHandler extends SimpleChannelHandler implements ChannelHandler {
+public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
     private final Logger     log = LoggerFactory.getLogger(getClass());
 
     private final SSLContext context;
 
-    /**
-     * {@link RemoteAddress} to which the proxy is connected
-     */
-    private RemoteAddress    address;
-    private Boolean          proxyKeepAlive;
-
-    public ProxyProtocolHandler() {
+    public HttpProxyConnectionHandler() {
         this(null);
     }
 
-    public ProxyProtocolHandler(final SSLContext context) {
+    public HttpProxyConnectionHandler(final SSLContext context) {
         this.context = context;
-        this.address = null;
-        this.proxyKeepAlive = true;
     }
 
     @Override
@@ -81,7 +67,8 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
 
         if (request.getMethod().equals(HttpMethod.CONNECT)) {
             log.info("Channel {} - connect received - open a new channel to {}", e.getChannel().getId(), request.getUri());
-            address = RemoteAddress.parseRequest(request);
+            log.debug("Channel {} - {}", e.getChannel().getId(), request.toString());
+            RemoteAddress address = RemoteAddress.parseRequest(request);
             // TODO: outbound MITM connection is still unencrypted, try to encrypt it
             if (context != null && address.getPort() == 443)
                 address = new RemoteAddress(address.getHost(), 80);
@@ -102,25 +89,9 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
                     }
                 }
             });
-
-        } else if (address == null) {
-            log.debug("Channel {} - request received, update and forward", e.getChannel().getId());
-            proxyKeepAlive = HttpHeaders.getHeader(request, "Proxy-Connection", "keep-alive").toLowerCase().equals("keep-alive");
-            request.removeHeader("Proxy-Connection");
-            updateRequest(request);
-            ctx.sendUpstream(e);
         } else {
-            log.debug("Channel {} - request received, forward", e.getChannel().getId());
-            HttpHeaders.setHost(request, address.toString());
             ctx.sendUpstream(e);
         }
-    }
-
-    @Override
-    public void writeRequested(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
-        if (e.getMessage() instanceof HttpResponse)
-            HttpHeaders.setKeepAlive((HttpResponse) e.getMessage(), proxyKeepAlive);
-        super.writeRequested(ctx, e);
     }
 
     private ChannelPipelineFactory getPipelineFactory(final Channel inboundChannel) {
@@ -141,22 +112,6 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
         return factory;
     }
 
-    private void updateRequest(final HttpRequest request) {
-        final StringBuilder sb = new StringBuilder();
-        final String uriString = request.getUri();
-        if (uriString.startsWith("http")) {
-            try {
-                final URL url = new URL(request.getUri());
-                sb.append(url.getPath());
-                if (url.getQuery() != null)
-                    sb.append("?").append(url.getQuery());
-                request.setUri(sb.toString());
-            } catch (MalformedURLException e2) {
-                log.error("Request: {}\nException: {}", request.toString(), e2.toString() + "\n" + e2.fillInStackTrace().toString());
-            }
-        }
-    }
-
     private ChannelFutureListener getMITMChannelFutureListener() {
         return new ChannelFutureListener() {
             public void operationComplete(final ChannelFuture inboundFuture) {
@@ -174,7 +129,7 @@ public class ProxyProtocolHandler extends SimpleChannelHandler implements Channe
                     NextProtoNego.debug = true;
 
                 pipe.addLast("ssl", new SslHandler(engine));
-                pipe.addLast("http_or_spdy", new HttpOrSpdyDecoder(new ProxyHandler()));
+                pipe.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpProxyHandler()));
                 pipe.getChannel().setReadable(true);
             }
         };

@@ -23,6 +23,7 @@ import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
+import org.jlange.proxy.inbound.ssl.HttpProxyConnectionHandler;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
 
 public class ProxyPipelineFactory implements ChannelPipelineFactory {
@@ -42,7 +43,8 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("encoder", new HttpResponseEncoder());
         pipeline.addLast("deflater", new HttpContentCompressor(9));
         pipeline.addLast("idle", new IdleShutdownHandler(60, 0));
-        pipeline.addLast("proxy_protocol", new ProxyProtocolHandler(context));
+        pipeline.addLast("ssl", new HttpProxyConnectionHandler(context));
+        pipeline.addLast("proxy", new HttpProxyRequestDecoder());
         pipeline.addLast("handler", new HttpProxyHandler());
 
         return pipeline;
