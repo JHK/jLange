@@ -78,6 +78,7 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
             outboundFuture.addListener(new ChannelFutureListener() {
                 public void operationComplete(final ChannelFuture outboundFuture) {
                     log.info("Channel {} - channel opened - send ok", e.getChannel().getId());
+                    ctx.getChannel().setReadable(false);
                     final ChannelFuture inboundFuture = ctx.getChannel().write(getHttpResponseOk());
                     if (context == null) {
                         inboundFuture.addListener(getPassthroughChannelFutureListener(outboundFuture.getChannel()));
@@ -120,7 +121,6 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
             public void operationComplete(final ChannelFuture inboundFuture) {
                 log.debug("Channel {} - update pipeline (MITM)", inboundFuture.getChannel().getId());
                 final ChannelPipeline pipe = inboundFuture.getChannel().getPipeline();
-                pipe.getChannel().setReadable(false);
                 while (pipe.getFirst() != null)
                     pipe.removeFirst();
 
@@ -143,7 +143,6 @@ public class HttpProxyConnectionHandler extends SimpleChannelUpstreamHandler imp
             public void operationComplete(ChannelFuture inboundFuture) {
                 log.debug("Channel {} - update pipeline (passthrough)", inboundFuture.getChannel().getId());
                 final Channel inboundChannel = inboundFuture.getChannel();
-                inboundChannel.setReadable(false);
                 while (inboundChannel.getPipeline().getFirst() != null)
                     inboundChannel.getPipeline().removeFirst();
                 inboundChannel.getPipeline().addLast("passthrough", new PassthroughHandler(outboundChannel));
