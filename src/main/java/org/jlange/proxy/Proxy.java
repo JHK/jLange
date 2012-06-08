@@ -28,20 +28,22 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jlange.proxy.inbound.ProxyPipelineFactory;
 import org.jlange.proxy.inbound.IdleShutdownHandler;
-import org.jlange.proxy.inbound.SpdyServerPipelineFactory;
+import org.jlange.proxy.inbound.ProxyPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Server {
+public class Proxy {
 
     public static void main(String[] args) throws IOException {
-        Server proxy = new Server(8080);
+        Proxy proxy = new Proxy(8080);
+        Spdy spdy = new Spdy(8443);
         proxy.start();
+        spdy.start();
         System.in.read();
         proxy.stop();
+        spdy.stop();
     }
 
     private final ServerSocketChannelFactory inboundFactory;
@@ -49,7 +51,7 @@ public class Server {
 
     private final int                        port;
 
-    public Server(final int port) {
+    public Proxy(final int port) {
         this.port = port;
         inboundFactory = new ServerSocketChannelFactory(Executors.newCachedThreadPool(), Executors.newCachedThreadPool());
     }
@@ -63,16 +65,7 @@ public class Server {
         Channel channel = inbound.bind(new InetSocketAddress(port));
         inboundFactory.addChannel(channel);
 
-        final ServerBootstrap inbound2 = new ServerBootstrap(inboundFactory);
-        inbound2.setPipelineFactory(new SpdyServerPipelineFactory());
-        inbound2.setOption("child.tcpNoDelay", true);
-        inbound2.setOption("child.keepAlive", true);
-
-        Channel channel2 = inbound2.bind(new InetSocketAddress(port+1));
-        inboundFactory.addChannel(channel2);
-        
         log.info("started on port {}", port);
-        log.info("started on port {}", port+1);
     }
 
     public void stop() {
