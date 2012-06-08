@@ -66,7 +66,7 @@ public class OutboundChannelPool {
             future = OutboundChannelPool.getInstance().getNewChannelFuture(address, channelPipelineFactory);
         return future;
     }
-    
+
     public ChannelFuture getNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
         // setup client
         final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
@@ -86,19 +86,23 @@ public class OutboundChannelPool {
     }
 
     public ChannelFuture getIdleChannelFuture(final RemoteAddress address) {
-        // check if there is an idle channel
-        final Integer channelId = channelIdPool.getIdleChannelId(address);
-        if (channelId == null)
-            return null;
+        final Integer channelId;
+        final ChannelFuture future;
+        synchronized (channelIdPool) {
+            // check if there is an idle channel
+            channelId = channelIdPool.getIdleChannelId(address);
+            if (channelId == null)
+                return null;
 
-        // get and remove channel from idle channels
-        final ChannelFuture future = channelFuture.get(channelId);
-        if (future == null)
-            return null;
+            // get and remove channel from idle channels
+            future = channelFuture.get(channelId);
+            if (future == null)
+                return null;
 
-        // set channel as used
-        channelIdPool.useChannelId(channelId);
-        channelIdPool.dump();
+            // set channel as used
+            channelIdPool.useChannelId(channelId);
+            channelIdPool.dump();
+        }
 
         if (future.getChannel().isConnected()) {
             log.info("Channel {} - reuse existing connection", channelId);
