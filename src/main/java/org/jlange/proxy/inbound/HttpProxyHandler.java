@@ -81,7 +81,10 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
             @Override
             public void responseReceived(final HttpResponse response) {
                 log.info("Channel {} - sending response - {}", e.getChannel().getId(), response.getStatus());
-                e.getChannel().write(response);
+                if (e.getChannel().isConnected())
+                    e.getChannel().write(response);
+                else
+                    log.warn("Channel {} - try to write response on closed channel - skipped", e.getChannel().getId());
             }
         });
 
