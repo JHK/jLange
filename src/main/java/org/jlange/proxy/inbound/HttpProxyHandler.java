@@ -73,6 +73,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
         final ChannelPipelineFactory factory = new HttpPipelineFactory();
         final ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleOrNewChannelFuture(address, factory);
+        log.info("Channel {} - using outboundchannel {}", e.getChannel().getId(), outboundFuture.getChannel().getId());
 
         // set actions when response arrives
         final HttpPluginHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginHandler.class);
@@ -84,7 +85,8 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
                 if (e.getChannel().isConnected())
                     e.getChannel().write(response);
                 else
-                    log.warn("Channel {} - try to write response on closed channel - skipped", e.getChannel().getId());
+                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                    log.info("Channel {} - try to write response on closed channel - skipped", e.getChannel().getId());
             }
         });
 

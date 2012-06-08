@@ -44,9 +44,13 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     }
 
     public HttpResponseListener getHttpResponseListener() {
-        if (httpResponseListener != null)
+        // get the response listener only once, so that the response can only get written once
+        // TODO: maybe a queue would be useful here
+        if (this.httpResponseListener != null) {
+            HttpResponseListener httpResponseListener = this.httpResponseListener;
+            this.httpResponseListener = null;
             return httpResponseListener;
-        else
+        } else
             return new HttpResponseListener() {
                 @Override
                 public void responseReceived(HttpResponse response) {}
@@ -76,6 +80,9 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
         log.info("Channel {} - closed", e.getChannel().getId());
         OutboundChannelPool.getInstance().closeChannel(e.getChannel().getId());
+
+        // if there is a response listener left inform it about not received a valid response
+        getHttpResponseListener().responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
 
     @Override
