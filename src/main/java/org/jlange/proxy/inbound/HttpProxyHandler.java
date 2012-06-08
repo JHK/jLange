@@ -94,7 +94,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         outboundFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
-                log.info("Channel {} - sending request", future.getChannel().getId());
+                log.info("Channel {} - sending request - {}", future.getChannel().getId(), address + request.getUri());
                 future.getChannel().write(request);
             }
         });
