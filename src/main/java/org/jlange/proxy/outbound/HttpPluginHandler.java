@@ -88,13 +88,13 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
 
         // apply plugins
-//        for (ResponsePlugin plugin : getResponsePlugins()) {
-//            if (plugin.isApplicable(response)) {
-//                log.info("Channel {} - using plugin {}", e.getChannel().getId(), plugin.getClass().getName());
-//                plugin.run(response);
-//                plugin.updateResponse(response);
-//            }
-//        }
+        for (ResponsePlugin plugin : getResponsePlugins()) {
+            if (plugin.isApplicable(response)) {
+                log.info("Channel {} - using plugin {}", e.getChannel().getId(), plugin.getClass().getName());
+                plugin.run(response);
+                plugin.updateResponse(response);
+            }
+        }
 
         getHttpResponseListener().responseReceived(response);
 
