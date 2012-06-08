@@ -25,12 +25,15 @@ import org.jlange.proxy.inbound.ssl.HttpOrSpdyDecoder;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SpdyServerPipelineFactory  implements ChannelPipelineFactory {
+public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
+    private final Logger     log = LoggerFactory.getLogger(getClass());
     private final SSLContext context;
 
-    public SpdyServerPipelineFactory() {
+    public SpdyPipelineFactory() {
         KeyStoreManager ksm = new SelfSignedKeyStoreManager();
         SslContextFactory scf = new SslContextFactory(ksm);
         this.context = scf.getServerContext();
@@ -43,10 +46,11 @@ public class SpdyServerPipelineFactory  implements ChannelPipelineFactory {
         engine.setUseClientMode(false);
 
         NextProtoNego.put(engine, new SimpleServerProvider());
-        NextProtoNego.debug = true;
+        if (log.isDebugEnabled())
+            NextProtoNego.debug = true;
 
         pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpSnoopServerHandler()));
+        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpSnoopServerHandler())); // TODO: HttpProxyHandler()
 
         return pipeline;
     }
