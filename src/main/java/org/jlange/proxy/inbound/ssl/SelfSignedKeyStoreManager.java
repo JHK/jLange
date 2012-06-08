@@ -33,6 +33,7 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
 
     private final Logger        log           = LoggerFactory.getLogger(getClass());
     private final File          KEYSTORE_FILE = new File("jlange_keystore.jks");
+    private final String        PKCS12_NAME   = "jlange_keystore.p12";
     private final String        ALIAS         = "jLange";
     private final String        DNAME         = "CN=*, OU=Masterthesis, O=Julian Knocke, L=Hamburg, ST=Hamburg, C=de";
     private static final String PASS          = "laZ8zah0";
@@ -54,7 +55,13 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
         nativeCall("keytool", "-genkey", "-alias", ALIAS, "-keysize", "4096", "-validity", "36500", "-keyalg", "RSA", "-dname", DNAME,
                 "-keypass", PASS, "-storepass", PASS, "-keystore", KEYSTORE_FILE.getName());
 
-        nativeCall("keytool", "-exportcert", "-alias", ALIAS, "-keystore", KEYSTORE_FILE.getName(), "-storepass", PASS, "-file", "jlange_cert");
+        nativeCall("keytool", "-exportcert", "-alias", ALIAS, "-keystore", KEYSTORE_FILE.getName(), "-storepass", PASS, "-file",
+                "jlange.cer");
+
+        // TODO this works on the console (without pass parameters), but not here... ?
+        nativeCall("keytool", "-importkeystore", "-srckeystore", KEYSTORE_FILE.getName(), "-destkeystore", PKCS12_NAME, "-srcstorepass",
+                PASS, "-deststorepass", PASS, "-srcalias", ALIAS, "-destalias", ALIAS, "-srckeypass", PASS, "-destkeypass", PASS,
+                "-noprompt");
     }
 
     public String getBase64Cert() {

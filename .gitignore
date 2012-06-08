@@ -4,4 +4,4 @@
 target/
 log.txt
 *.jks
-jlange_cert
+*.cer
