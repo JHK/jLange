@@ -35,7 +35,7 @@ public class SelfSignedKeyStoreManager implements KeyStoreManager {
     private final File          KEYSTORE_FILE = new File("jlange_keystore.jks");
     private final String        PKCS12_NAME   = "jlange_keystore.p12";
     private final String        ALIAS         = "jLange";
-    private final String        DNAME         = "CN=*, OU=Masterthesis, O=Julian Knocke, L=Hamburg, ST=Hamburg, C=de";
+    private final String        DNAME         = "CN=www.spdytest.com, OU=Masterthesis, O=Julian Knocke, L=Hamburg, ST=Hamburg, C=de";
     private static final String PASS          = "laZ8zah0";
 
     public SelfSignedKeyStoreManager() {
