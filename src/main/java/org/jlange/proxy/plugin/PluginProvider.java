@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jlange.proxy.plugin.response.Compressor;
 import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
 
 public class PluginProvider {
@@ -32,6 +33,7 @@ public class PluginProvider {
     private PluginProvider() {
         plugins = new ArrayList<ResponsePlugin>();
 
+        plugins.add(new Compressor());
         plugins.add(new ResponseHeaderOptimizer());
     }
 
