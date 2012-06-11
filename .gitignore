@@ -5,3 +5,4 @@ target/
 log.txt
 *.jks
 *.cer
+*.p12
