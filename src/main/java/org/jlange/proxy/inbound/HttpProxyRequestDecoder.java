@@ -16,7 +16,6 @@ package org.jlange.proxy.inbound;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import org.htmlparser.http.HttpHeader;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;

@@ -94,16 +94,6 @@
 			<version>8.1.2.v20120308</version>
 		</dependency>
 		<dependency>
-			<groupId>org.htmlparser</groupId>
-			<artifactId>htmlparser</artifactId>
-			<version>1.6</version>
-		</dependency>
-		<dependency>
-			<groupId>net.sf.jtidy</groupId>
-			<artifactId>jtidy</artifactId>
-			<version>r938</version>
-		</dependency>
-		<dependency>
 			<groupId>com.googlecode.htmlcompressor</groupId>
 			<artifactId>htmlcompressor</artifactId>
 			<version>1.5.2</version>
