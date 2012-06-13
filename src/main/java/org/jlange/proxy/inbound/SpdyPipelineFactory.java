@@ -50,7 +50,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
             NextProtoNego.debug = true;
 
         pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpSnoopServerHandler())); // TODO: HttpProxyHandler()
+        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpProxyHandler()));
 
         return pipeline;
     }
