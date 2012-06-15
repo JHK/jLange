@@ -2,7 +2,6 @@
 .project
 .settings/
 target/
+pki/
 log.txt
 *.jks
-*.cer
-*.p12

@@ -35,7 +35,6 @@ public class SslContextFactory {
         SSLContext clientContext = null;
         try {
             final KeyStore ks = KeyStore.getInstance("JKS");
-            // ks.load(new FileInputStream("keystore.jks"), "changeit".toCharArray());
             ks.load(ksm.keyStoreAsInputStream(), ksm.getKeyStorePassword());
 
             // Set up key manager factory to use our key store
