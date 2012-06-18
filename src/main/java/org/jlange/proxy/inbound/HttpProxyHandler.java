@@ -74,6 +74,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
             @Override
             public void responseReceived(final HttpResponse response) {
                 log.info("Channel {} - sending response - {}", e.getChannel().getId(), response.getStatus());
+                log.debug(response.toString());
                 if (e.getChannel().isConnected()) {
                     if (request.getHeader("X-SPDY-Stream-ID") != null) {
                         response.setHeader("X-SPDY-Stream-ID", request.getHeader("X-SPDY-Stream-ID"));
@@ -90,7 +91,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         outboundFuture.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
-                log.info("Channel {} - sending request - {}", future.getChannel().getId(), address + request.getUri());
+                outboundHandler.log.info("Channel {} - sending request - {}", future.getChannel().getId(), address + request.getUri());
                 future.getChannel().write(request);
             }
         });

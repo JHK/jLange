@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 
 public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger         log = LoggerFactory.getLogger(getClass());
+    public final Logger          log = LoggerFactory.getLogger(getClass());
     private HttpResponseListener httpResponseListener;
     private List<ResponsePlugin> responsePlugins;
 
