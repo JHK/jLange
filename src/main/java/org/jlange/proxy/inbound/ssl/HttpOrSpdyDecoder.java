@@ -14,7 +14,7 @@
 package org.jlange.proxy.inbound.ssl;
 
 import static org.jlange.proxy.inbound.SimpleServerProvider.HTTP_1_1;
-import static org.jlange.proxy.inbound.SimpleServerProvider.SPDY_2;
+import static org.jlange.proxy.inbound.SimpleServerProvider.SPDY_3;
 
 import org.eclipse.jetty.npn.NextProtoNego;
 import org.jboss.netty.channel.ChannelEvent;
@@ -54,16 +54,15 @@ public class HttpOrSpdyDecoder implements ChannelUpstreamHandler {
         final String protocol = provider.getSelectedProtocol();
 
         if (protocol != null)
-            log.debug("Protocol: {}", protocol);
+            log.debug("Channel {} - protocol: {}", e.getChannel().getId(), protocol);
 
-        if (SPDY_2.equals(protocol)) {
+        if (SPDY_3.equals(protocol)) {
             ChannelPipeline pipeline = ctx.getPipeline();
-            pipeline.addLast("decoder", new SpdyFrameDecoder());
-            pipeline.addLast("encoder", new SpdyFrameEncoder());
-            pipeline.addLast("spdy_session_handler", new SpdySessionHandler(true));
-            pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder());
-            pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(2 * 1024 * 1024));
-            pipeline.addLast("proxy", new HttpProxyRequestDecoder());
+            pipeline.addLast("decoder", new SpdyFrameDecoder(3));
+            pipeline.addLast("encoder", new SpdyFrameEncoder(3, 9, 15, 8));
+            pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
+            pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
+            pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
             pipeline.addLast("handler", handler);
 
             // remove this handler, and process the requests as SPDY

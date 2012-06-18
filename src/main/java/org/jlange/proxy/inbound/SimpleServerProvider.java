@@ -21,7 +21,7 @@ import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
 public class SimpleServerProvider implements ServerProvider {
 
     public static final String HTTP_1_1         = "http/1.1";
-    public static final String SPDY_2           = "spdy/2";
+    public static final String SPDY_3           = "spdy/3";
 
     private String             selectedProtocol = null;
 
@@ -30,7 +30,7 @@ public class SimpleServerProvider implements ServerProvider {
     }
 
     public List<String> protocols() {
-        return Arrays.asList(SPDY_2, HTTP_1_1);
+        return Arrays.asList(SPDY_3, HTTP_1_1);
     }
 
     public void protocolSelected(String protocol) {
