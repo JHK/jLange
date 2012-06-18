@@ -22,13 +22,9 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.Tools;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.HttpPluginHandler;
 import org.jlange.proxy.outbound.OutboundChannelPool;
@@ -44,11 +40,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        if (e.getChannel().isConnected())
-            e.getChannel().write(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
-
         log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        Tools.closeOnFlush(e.getChannel());
     }
 
     @Override
