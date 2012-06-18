@@ -75,8 +75,10 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
             public void responseReceived(final HttpResponse response) {
                 log.info("Channel {} - sending response - {}", e.getChannel().getId(), response.getStatus());
                 if (e.getChannel().isConnected()) {
-                    if (request.getHeader("X-SPDY-Stream-ID") != null)
+                    if (request.getHeader("X-SPDY-Stream-ID") != null) {
                         response.setHeader("X-SPDY-Stream-ID", request.getHeader("X-SPDY-Stream-ID"));
+                        response.setHeader("X-SPDY-Stream-Priority", 0);
+                    }
                     e.getChannel().write(response);
                 } else
                     // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
