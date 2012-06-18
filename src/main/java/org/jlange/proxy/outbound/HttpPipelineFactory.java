@@ -20,7 +20,7 @@ import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jlange.proxy.inbound.IdleShutdownHandler;
+import org.jlange.proxy.util.IdleShutdownHandler;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 

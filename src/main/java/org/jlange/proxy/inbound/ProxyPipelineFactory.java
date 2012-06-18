@@ -25,6 +25,7 @@ import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.HttpProxyConnectionHandler;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
+import org.jlange.proxy.util.IdleShutdownHandler;
 
 public class ProxyPipelineFactory implements ChannelPipelineFactory {
 

@@ -27,9 +27,9 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jlange.proxy.inbound.IdleShutdownHandler;
 import org.jlange.proxy.inbound.SpdyPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
+import org.jlange.proxy.util.IdleShutdownHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

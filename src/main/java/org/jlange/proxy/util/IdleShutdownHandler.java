@@ -11,7 +11,7 @@
  * 
  * You should have received a copy of the GNU General Public License along with jLange. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.jlange.proxy.inbound;
+package org.jlange.proxy.util;
 
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
