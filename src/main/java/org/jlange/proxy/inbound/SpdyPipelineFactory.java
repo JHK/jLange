@@ -13,25 +13,43 @@
  */
 package org.jlange.proxy.inbound;
 
+import java.util.Arrays;
+import java.util.List;
+
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 
 import org.eclipse.jetty.npn.NextProtoNego;
+import org.eclipse.jetty.npn.NextProtoNego.ServerProvider;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpContentCompressor;
+import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.codec.spdy.SpdyFrameDecoder;
+import org.jboss.netty.handler.codec.spdy.SpdyFrameEncoder;
+import org.jboss.netty.handler.codec.spdy.SpdyHttpDecoder;
+import org.jboss.netty.handler.codec.spdy.SpdyHttpEncoder;
+import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jlange.proxy.inbound.ssl.HttpOrSpdyDecoder;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
+import org.jlange.proxy.util.IdleShutdownHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
-    private final Logger     log = LoggerFactory.getLogger(getClass());
-    private final SSLContext context;
+    public static final String HTTP_1_1 = "http/1.1";
+    public static final String SPDY_3   = "spdy/3";
+
+    private final Logger       log      = LoggerFactory.getLogger(getClass());
+    private final SSLContext   context;
 
     public SpdyPipelineFactory() {
         KeyStoreManager ksm = new SelfSignedKeyStoreManager();
@@ -46,12 +64,76 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
         engine.setUseClientMode(false);
 
         NextProtoNego.put(engine, new SimpleServerProvider());
-        if (log.isDebugEnabled())
-            NextProtoNego.debug = true;
+        NextProtoNego.debug = log.isDebugEnabled();
 
         pipeline.addLast("ssl", new SslHandler(engine));
-        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder(new HttpProxyHandler()));
+        pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder());
 
         return pipeline;
+    }
+
+    /**
+     * This handler must be placed in the pipeline directly after a {@link SslHandler}. It will choose the pipeline for decoding the traffic
+     * in the SSL session.
+     */
+    private final class HttpOrSpdyDecoder implements ChannelUpstreamHandler {
+
+        public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e) throws Exception {
+            final SslHandler sslHandler = ctx.getPipeline().get(SslHandler.class);
+            final SimpleServerProvider provider = (SimpleServerProvider) NextProtoNego.get(sslHandler.getEngine());
+            final String protocol = provider.getSelectedProtocol();
+
+            if (protocol != null)
+                log.debug("Channel {} - protocol: {}", e.getChannel().getId(), protocol);
+
+            if (SPDY_3.equals(protocol)) {
+                ChannelPipeline pipeline = ctx.getPipeline();
+                pipeline.addLast("decoder", new SpdyFrameDecoder(3));
+                pipeline.addLast("encoder", new SpdyFrameEncoder(3, 9, 15, 8));
+                pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
+                pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
+                pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
+                pipeline.addLast("handler", new HttpProxyHandler());
+
+                // remove this handler, and process the requests as SPDY
+                pipeline.remove(this);
+                ctx.sendUpstream(e);
+            } else if (HTTP_1_1.equals(protocol)) {
+                ChannelPipeline pipeline = ctx.getPipeline();
+                pipeline.addLast("decoder", new HttpRequestDecoder());
+                pipeline.addLast("encoder", new HttpResponseEncoder());
+                pipeline.addLast("deflater", new HttpContentCompressor(9));
+                pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
+                pipeline.addLast("handler", new HttpProxyHandler());
+
+                // remove this handler, and process the requests as HTTP
+                pipeline.remove(this);
+                ctx.sendUpstream(e);
+            } else {
+                // still in protocol negotiaton, so do nothing in here
+            }
+        }
+    }
+
+    private final class SimpleServerProvider implements ServerProvider {
+
+        private String selectedProtocol = null;
+
+        public void unsupported() {
+            selectedProtocol = HTTP_1_1;
+        }
+
+        public List<String> protocols() {
+            return Arrays.asList(SPDY_3, HTTP_1_1);
+        }
+
+        public void protocolSelected(String protocol) {
+            selectedProtocol = protocol;
+        }
+
+        public String getSelectedProtocol() {
+            return selectedProtocol;
+        }
+
     }
 }
