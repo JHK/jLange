@@ -35,7 +35,10 @@ import org.slf4j.LoggerFactory;
 
 public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private final static String SPDY_STREAM_ID   = "X-SPDY-Stream-ID";
+    private final static String SPDY_STREAM_PRIO = "X-SPDY-Stream-Priority";
+
+    private final Logger        log              = LoggerFactory.getLogger(getClass());
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
@@ -58,8 +61,8 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         // request plugins
         // TODO: implement
         HttpHeaders.setKeepAlive(request, true);
-        final int spdyStreamId = HttpHeaders.getIntHeader(request, "X-SPDY-Stream-ID", -1);
-        request.removeHeader("X-SPDY-Stream-ID");
+        final int spdyStreamId = HttpHeaders.getIntHeader(request, SPDY_STREAM_ID, -1);
+        request.removeHeader(SPDY_STREAM_ID);
 
         // request to predefined response plugins
         // TODO: implement
@@ -75,8 +78,8 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
             @Override
             public void responseReceived(final HttpResponse response) {
                 if (spdyStreamId != -1) {
-                    response.setHeader("X-SPDY-Stream-ID", spdyStreamId);
-                    response.setHeader("X-SPDY-Stream-Priority", 0);
+                    response.setHeader(SPDY_STREAM_ID, spdyStreamId);
+                    response.setHeader(SPDY_STREAM_PRIO, 0);
                 }
 
                 log.info("Channel {} - sending response - {}", e.getChannel().getId(), response.getStatus());
