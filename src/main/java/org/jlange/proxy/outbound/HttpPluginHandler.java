@@ -16,6 +16,8 @@ package org.jlange.proxy.outbound;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
@@ -24,6 +26,7 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -35,7 +38,7 @@ import org.slf4j.LoggerFactory;
 
 public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    public final Logger          log = LoggerFactory.getLogger(getClass());
+    private final Logger         log = LoggerFactory.getLogger(getClass());
     private HttpResponseListener httpResponseListener;
     private List<ResponsePlugin> responsePlugins;
 
@@ -66,6 +69,16 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
             return responsePlugins;
         else
             return new LinkedList<ResponsePlugin>();
+    }
+
+    public void sendRequest(final ChannelFuture future, final HttpRequest request) {
+        future.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(final ChannelFuture future) {
+                log.info("Channel {} - sending request - {}", future.getChannel().getId(), request.getUri());
+                future.getChannel().write(request);
+            }
+        });
     }
 
     @Override
