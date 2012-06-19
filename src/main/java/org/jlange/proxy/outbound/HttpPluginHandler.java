@@ -74,6 +74,7 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
         // request plugins
         // TODO: implement
+        request.setProtocolVersion(HttpVersion.HTTP_1_1);
         HttpHeaders.setKeepAlive(request, true);
 
         future.addListener(new ChannelFutureListener() {
