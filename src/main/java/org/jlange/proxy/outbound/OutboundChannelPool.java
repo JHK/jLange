@@ -61,9 +61,9 @@ public class OutboundChannelPool {
     }
 
     public ChannelFuture getIdleOrNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
-        ChannelFuture future = OutboundChannelPool.getInstance().getIdleChannelFuture(address);
+        ChannelFuture future = getIdleChannelFuture(address);
         if (future == null)
-            future = OutboundChannelPool.getInstance().getNewChannelFuture(address, channelPipelineFactory);
+            future = getNewChannelFuture(address, channelPipelineFactory);
         return future;
     }
 
