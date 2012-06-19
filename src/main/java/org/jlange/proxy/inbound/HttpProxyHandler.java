@@ -25,6 +25,7 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.HttpPluginHandler;
 import org.jlange.proxy.outbound.OutboundChannelPool;
@@ -57,15 +58,9 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         final RemoteAddress address = RemoteAddress.parseRequest(request);
 
         // just for logging
-        final String channelId = getLogChannelId(e.getChannel(), request);
+        final String channelId = getLogChannelId(request, e.getChannel());
         log.info("Channel {} - request received - {}", channelId, address + request.getUri());
         log.debug(request.toString());
-
-        // request plugins
-        // TODO: implement
-        HttpHeaders.setKeepAlive(request, true);
-        final int spdyStreamId = HttpHeaders.getIntHeader(request, SPDY_STREAM_ID, -1);
-        request.removeHeader(SPDY_STREAM_ID);
 
         // request to predefined response plugins
         // TODO: implement
@@ -77,25 +72,10 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         // set actions when response arrives
         final HttpPluginHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginHandler.class);
         outboundHandler.setResponsePlugins(PluginProvider.getInstance().getResponsePlugins(request));
-        outboundHandler.setResponseListener(new HttpResponseListener() {
-            @Override
-            public void responseReceived(final HttpResponse response) {
-                if (spdyStreamId != -1) {
-                    response.setHeader(SPDY_STREAM_ID, spdyStreamId);
-                    response.setHeader(SPDY_STREAM_PRIO, 0);
-                }
-
-                log.info("Channel {} - sending response - {}", channelId, response.getStatus());
-                log.debug(response.toString());
-                if (e.getChannel().isConnected()) {
-                    e.getChannel().write(response);
-                } else
-                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                    log.info("Channel {} - try to write response on closed channel - skipped", channelId);
-            }
-        });
+        outboundHandler.setResponseListener(new ProxyResponseListener(request, e.getChannel()));
 
         // perform request on outbound channel
+        request.removeHeader(SPDY_STREAM_ID);
         outboundHandler.sendRequest(outboundFuture, request);
     }
 
@@ -104,7 +84,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         log.info("Channel {} - closed", e.getChannel().getId());
     }
 
-    private String getLogChannelId(Channel channel, HttpRequest request) {
+    private String getLogChannelId(final HttpRequest request, final Channel channel) {
         String channelId = null;
         if (log.isInfoEnabled()) {
             channelId = channel.getId().toString();
@@ -113,5 +93,39 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
                 channelId += "+" + spdyStreamId;
         }
         return channelId;
+    }
+
+    private class ProxyResponseListener implements HttpResponseListener {
+
+        private final String  channelId;
+        private final int     spdyStreamId;
+        private final Channel channel;
+
+        public ProxyResponseListener(final HttpRequest request, final Channel channel) {
+            channelId = getLogChannelId(request, channel);
+            spdyStreamId = HttpHeaders.getIntHeader(request, SPDY_STREAM_ID, -1);
+            this.channel = channel;
+        }
+
+        @Override
+        public void responseReceived(HttpResponse response) {
+            // SPDY
+            if (spdyStreamId != -1) {
+                response.setHeader(SPDY_STREAM_ID, spdyStreamId);
+                response.setHeader(SPDY_STREAM_PRIO, 0);
+            }
+
+            // HTTP Version for proxy
+            response.setProtocolVersion(HttpVersion.HTTP_1_1);
+
+            log.info("Channel {} - sending response - {}", channelId, response.getStatus());
+            log.debug(response.toString());
+            if (channel.isConnected()) {
+                channel.write(response);
+            } else
+                // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                log.info("Channel {} - try to write response on closed channel - skipped", channelId);
+        }
+
     }
 }
