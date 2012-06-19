@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.inbound;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -50,7 +51,10 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        if (!e.getCause().getClass().equals(IOException.class)) {
+            e.getCause().printStackTrace();
+        }
     }
 
     @Override
