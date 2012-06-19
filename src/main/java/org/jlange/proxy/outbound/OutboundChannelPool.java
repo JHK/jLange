@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jlange.proxy.util.RemoteAddress;
@@ -29,6 +30,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class OutboundChannelPool {
+
+    // @formatter:off
+    public final static ChannelFutureListener IDLE =
+            new ChannelFutureListener() {
+                @Override
+                public void operationComplete(final ChannelFuture future) {
+                   if (!future.isSuccess())
+                       return;
+
+                   final OutboundChannelPool pool = OutboundChannelPool.getInstance();
+                   pool.log.info("Channel {} - channel is idle", future.getChannel().getId());
+                   synchronized (pool.channelIdPool) {
+                       pool.channelIdPool.idleChannelId(future.getChannel().getId());
+                       pool.channelFuture.put(future.getChannel().getId(), future);
+                       pool.channelIdPool.dump();
+                   }
+
+               }
+           };
+    // @formatter:on
 
     private final static NioClientSocketChannelFactory outboundFactory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
                                                                                Executors.newCachedThreadPool());
@@ -82,6 +103,20 @@ public class OutboundChannelPool {
         channelFuture.put(f.getChannel().getId(), f);
         channelIdPool.dump();
 
+        // remove from pool on close
+        f.getChannel().getCloseFuture().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(final ChannelFuture future) {
+                final Integer channelId = future.getChannel().getId();
+                log.info("Channel {} - closing, remove from pool", channelId);
+                synchronized (channelIdPool) {
+                    channelIdPool.removeChannelId(channelId);
+                    channelFuture.remove(channelId);
+                    channelIdPool.dump();
+                }
+            }
+        });
+
         return f;
     }
 
@@ -109,20 +144,6 @@ public class OutboundChannelPool {
             return future;
         } else
             return null;
-    }
-
-    public void setChannelIdle(final ChannelFuture future) {
-        log.info("Channel {} - channel is idle", future.getChannel().getId());
-        channelIdPool.idleChannelId(future.getChannel().getId());
-        channelFuture.put(future.getChannel().getId(), future);
-        channelIdPool.dump();
-    }
-
-    public void closeChannel(final Integer channelId) {
-        log.info("Channel {} - closed, remove from pool", channelId);
-        channelIdPool.removeChannelId(channelId);
-        channelFuture.remove(channelId);
-        channelIdPool.dump();
     }
 
     /**

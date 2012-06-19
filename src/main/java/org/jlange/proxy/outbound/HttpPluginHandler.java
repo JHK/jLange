@@ -95,9 +95,8 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     }
 
     @Override
-    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) throws Exception {
+    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
         log.info("Channel {} - closed", e.getChannel().getId());
-        OutboundChannelPool.getInstance().closeChannel(e.getChannel().getId());
 
         // if there is a response listener left inform it about not received a valid response
         getHttpResponseListener().responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
@@ -124,8 +123,8 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         getHttpResponseListener().responseReceived(response);
 
         if (isKeepAlive)
-            OutboundChannelPool.getInstance().setChannelIdle(e.getFuture());
+            e.getFuture().addListener(OutboundChannelPool.IDLE);
         else
-            Tools.closeOnFlush(e.getChannel());
+            e.getFuture().addListener(ChannelFutureListener.CLOSE);
     }
 }
