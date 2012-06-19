@@ -30,7 +30,6 @@ import org.jboss.netty.handler.codec.spdy.SpdyHttpDecoder;
 import org.jboss.netty.handler.codec.spdy.SpdyHttpEncoder;
 import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jlange.proxy.inbound.HttpProxyRequestDecoder;
 import org.jlange.proxy.inbound.SimpleServerProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +71,6 @@ public class HttpOrSpdyDecoder implements ChannelUpstreamHandler {
             ChannelPipeline pipeline = ctx.getPipeline();
             pipeline.addLast("decoder", new HttpRequestDecoder());
             pipeline.addLast("encoder", new HttpResponseEncoder());
-            pipeline.addLast("proxy", new HttpProxyRequestDecoder());
             pipeline.addLast("handler", handler);
 
             // remove this handler, and process the requests as HTTP

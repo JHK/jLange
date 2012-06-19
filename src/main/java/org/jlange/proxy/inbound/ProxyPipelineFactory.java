@@ -45,7 +45,6 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("deflater", new HttpContentCompressor(9));
         pipeline.addLast("idle", new IdleShutdownHandler(60, 0));
         pipeline.addLast("ssl", new HttpProxyConnectionHandler(context));
-        pipeline.addLast("proxy", new HttpProxyRequestDecoder());
         pipeline.addLast("handler", new HttpProxyHandler());
 
         return pipeline;

@@ -13,6 +13,9 @@
  */
 package org.jlange.proxy.inbound;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
@@ -37,8 +40,11 @@ import org.slf4j.LoggerFactory;
 
 public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
+    private final static String PROXY_CONNECTION = "Proxy-Connection";
+    private final static String KEEP_ALIVE       = "keep-alive";
     private final static String SPDY_STREAM_ID   = "X-SPDY-Stream-ID";
     private final static String SPDY_STREAM_PRIO = "X-SPDY-Stream-Priority";
+    private final static String HTTP_SCHEMA      = "http";
 
     private final Logger        log              = LoggerFactory.getLogger(getClass());
 
@@ -55,17 +61,17 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpRequest request = (HttpRequest) e.getMessage();
-        final RemoteAddress address = RemoteAddress.parseRequest(request);
 
         // just for logging
         final String channelId = getLogChannelId(request, e.getChannel());
-        log.info("Channel {} - request received - {}", channelId, address + request.getUri());
+        log.info("Channel {} - request received - {}", channelId, request.getUri());
         log.debug(request.toString());
 
         // request to predefined response plugins
         // TODO: implement
 
         final ChannelPipelineFactory factory = new HttpPipelineFactory();
+        final RemoteAddress address = RemoteAddress.parseRequest(request);
         final ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleOrNewChannelFuture(address, factory);
         log.info("Channel {} - using outboundchannel {}", channelId, outboundFuture.getChannel().getId());
 
@@ -76,6 +82,9 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
         // perform request on outbound channel
         request.removeHeader(SPDY_STREAM_ID);
+        request.removeHeader(PROXY_CONNECTION);
+        if (request.getUri().startsWith(HTTP_SCHEMA))
+            updateRequestUri(request);
         outboundHandler.sendRequest(outboundFuture, request);
     }
 
@@ -84,12 +93,25 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         log.info("Channel {} - closed", e.getChannel().getId());
     }
 
+    private void updateRequestUri(final HttpRequest request) {
+        try {
+            final URL url = new URL(request.getUri());
+            final StringBuilder sb = new StringBuilder();
+            sb.append(url.getPath());
+            if (url.getQuery() != null)
+                sb.append("?").append(url.getQuery());
+            request.setUri(sb.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+    }
+
     private String getLogChannelId(final HttpRequest request, final Channel channel) {
         String channelId = null;
         if (log.isInfoEnabled()) {
             channelId = channel.getId().toString();
-            final int spdyStreamId = HttpHeaders.getIntHeader(request, SPDY_STREAM_ID, -1);
-            if (spdyStreamId != -1)
+            final String spdyStreamId = HttpHeaders.getHeader(request, SPDY_STREAM_ID);
+            if (spdyStreamId != null)
                 channelId += "+" + spdyStreamId;
         }
         return channelId;
@@ -98,19 +120,27 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
     private class ProxyResponseListener implements HttpResponseListener {
 
         private final String  channelId;
-        private final int     spdyStreamId;
+        private final String  spdyStreamId;
         private final Channel channel;
+        private final Boolean proxyKeepAlive;
 
         public ProxyResponseListener(final HttpRequest request, final Channel channel) {
             channelId = getLogChannelId(request, channel);
-            spdyStreamId = HttpHeaders.getIntHeader(request, SPDY_STREAM_ID, -1);
+            spdyStreamId = HttpHeaders.getHeader(request, SPDY_STREAM_ID);
+            proxyKeepAlive = HttpHeaders.getHeader(request, PROXY_CONNECTION, KEEP_ALIVE).toLowerCase().equals(KEEP_ALIVE);
             this.channel = channel;
         }
 
         @Override
         public void responseReceived(HttpResponse response) {
+            if (!channel.isConnected()) {
+                // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                log.info("Channel {} - try to send response to closed channel - skipped", channelId);
+                return;
+            }
+
             // SPDY
-            if (spdyStreamId != -1) {
+            if (spdyStreamId != null) {
                 response.setHeader(SPDY_STREAM_ID, spdyStreamId);
                 response.setHeader(SPDY_STREAM_PRIO, 0);
             }
@@ -118,13 +148,12 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
             // HTTP Version for proxy
             response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
+            // Keep alive
+            HttpHeaders.setKeepAlive(response, proxyKeepAlive);
+
             log.info("Channel {} - sending response - {}", channelId, response.getStatus());
             log.debug(response.toString());
-            if (channel.isConnected()) {
-                channel.write(response);
-            } else
-                // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                log.info("Channel {} - try to write response on closed channel - skipped", channelId);
+            channel.write(response);
         }
 
     }
