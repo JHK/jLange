@@ -7,7 +7,6 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +36,7 @@ public class PassthroughHandler extends SimpleChannelUpstreamHandler {
 
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        Tools.closeOnFlush(otherChannel);
-        Tools.closeOnFlush(e.getChannel());
+        otherChannel.close();
+        e.getChannel().close();
     }
 }

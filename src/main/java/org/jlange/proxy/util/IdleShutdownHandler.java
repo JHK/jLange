@@ -19,7 +19,6 @@ import org.jboss.netty.handler.timeout.IdleState;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
-import org.jlange.proxy.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +35,7 @@ public class IdleShutdownHandler extends IdleStateHandler implements ChannelHand
     @Override
     protected void channelIdle(ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
         log.info("Channel {} - shutdown due idle time exceeded", ctx.getChannel().getId());
-        Tools.closeOnFlush(ctx.getChannel());
+        ctx.getChannel().close();
     }
 
 }

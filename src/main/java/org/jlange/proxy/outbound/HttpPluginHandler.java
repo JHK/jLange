@@ -30,7 +30,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.Tools;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
@@ -89,7 +88,7 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
         log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        Tools.closeOnFlush(e.getChannel());
+        e.getChannel().close();
 
         getHttpResponseListener().responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
