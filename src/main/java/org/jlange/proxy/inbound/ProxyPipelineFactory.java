@@ -13,40 +13,109 @@
  */
 package org.jlange.proxy.inbound;
 
-import javax.net.ssl.SSLContext;
+import java.net.InetSocketAddress;
 
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jlange.proxy.inbound.ssl.KeyStoreManager;
-import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
-import org.jlange.proxy.inbound.ssl.HttpProxyConnectionHandler;
-import org.jlange.proxy.inbound.ssl.SslContextFactory;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.outbound.OutboundChannelPool;
+import org.jlange.proxy.outbound.PassthroughHandler;
 import org.jlange.proxy.util.IdleShutdownHandler;
+import org.jlange.proxy.util.RemoteAddress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ProxyPipelineFactory implements ChannelPipelineFactory {
 
-    private final SSLContext context;
-
-    public ProxyPipelineFactory() {
-        KeyStoreManager ksm = new SelfSignedKeyStoreManager();
-        SslContextFactory scf = new SslContextFactory(ksm);
-        this.context = scf.getServerContext();
-    }
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     public ChannelPipeline getPipeline() {
         final ChannelPipeline pipeline = Channels.pipeline();
 
         pipeline.addLast("decoder", new HttpRequestDecoder());
         pipeline.addLast("encoder", new HttpResponseEncoder());
-        pipeline.addLast("deflater", new HttpContentCompressor(9));
-        pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-        pipeline.addLast("ssl", new HttpProxyConnectionHandler(context));
-        pipeline.addLast("handler", new HttpProxyHandler());
+        pipeline.addLast("ssl_or_http", new SslOrHttpDecoder());
 
         return pipeline;
+    }
+
+    private final class SslOrHttpDecoder extends SimpleChannelUpstreamHandler {
+
+        @Override
+        public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+            final HttpRequest request = (HttpRequest) e.getMessage();
+
+            final ChannelPipeline pipeline = ctx.getPipeline();
+            if (request.getMethod().equals(HttpMethod.CONNECT)) {
+                log.info("Channel {} - connect received - open a new channel to {}", e.getChannel().getId(), request.getUri());
+                log.debug("Channel {} - {}", e.getChannel().getId(), request.toString());
+
+                // open channel
+                final RemoteAddress address = RemoteAddress.parseRequest(request);
+                final ChannelFuture outboundFuture = openPassthroughChannel(address, pipeline.getChannel());
+
+                // update pipeline listener
+                final ChannelFutureListener updatePipeline = getUpdatePipelineListener(pipeline, outboundFuture.getChannel());
+
+                // send OK when outbound channel is connected
+                outboundFuture.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(final ChannelFuture future) {
+                        pipeline.getChannel().setReadable(false);
+                        pipeline.getChannel().write(getOkResponse()).addListener(updatePipeline);
+                    }
+                });
+            } else {
+                pipeline.addLast("deflater", new HttpContentCompressor(9));
+                pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
+                pipeline.addLast("handler", new HttpProxyHandler());
+
+                pipeline.remove(this);
+                ctx.sendUpstream(e);
+            }
+        }
+
+        private HttpResponse getOkResponse() {
+            return new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+        }
+
+        private ChannelFutureListener getUpdatePipelineListener(final ChannelPipeline pipeline, final Channel target) {
+            return new ChannelFutureListener() {
+                @Override
+                public void operationComplete(final ChannelFuture future) {
+                    pipeline.remove(HttpRequestDecoder.class);
+                    pipeline.remove(HttpResponseEncoder.class);
+                    pipeline.remove(SslOrHttpDecoder.class);
+
+                    pipeline.addLast("passthrough", new PassthroughHandler(target));
+                    pipeline.getChannel().setReadable(true);
+                }
+            };
+
+        }
+
+        private ChannelFuture openPassthroughChannel(final RemoteAddress address, final Channel target) {
+            final ClientBootstrap outboundClient = new ClientBootstrap(OutboundChannelPool.getNioClientSocketChannelFactory());
+            final ChannelPipeline outboundPipeline = Channels.pipeline();
+            outboundPipeline.addLast("passthrough", new PassthroughHandler(target));
+            outboundClient.setPipeline(outboundPipeline);
+            return outboundClient.connect(new InetSocketAddress(address.getHost(), address.getPort()));
+        }
     }
 }
