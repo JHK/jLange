@@ -58,6 +58,8 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         // request plugins
         // TODO: implement
         HttpHeaders.setKeepAlive(request, true);
+        final int spdyStreamId = HttpHeaders.getIntHeader(request, "X-SPDY-Stream-ID", -1);
+        request.removeHeader("X-SPDY-Stream-ID");
 
         // request to predefined response plugins
         // TODO: implement
@@ -72,13 +74,14 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         outboundHandler.setResponseListener(new HttpResponseListener() {
             @Override
             public void responseReceived(final HttpResponse response) {
+                if (spdyStreamId != -1) {
+                    response.setHeader("X-SPDY-Stream-ID", spdyStreamId);
+                    response.setHeader("X-SPDY-Stream-Priority", 0);
+                }
+
                 log.info("Channel {} - sending response - {}", e.getChannel().getId(), response.getStatus());
                 log.debug(response.toString());
                 if (e.getChannel().isConnected()) {
-                    if (request.getHeader("X-SPDY-Stream-ID") != null) {
-                        response.setHeader("X-SPDY-Stream-ID", request.getHeader("X-SPDY-Stream-ID"));
-                        response.setHeader("X-SPDY-Stream-Priority", 0);
-                    }
                     e.getChannel().write(response);
                 } else
                     // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
