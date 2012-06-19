@@ -22,7 +22,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 public class RemoteAddress {
 
-    public static RemoteAddress parseRequest(HttpRequest request) {
+    public static RemoteAddress parseRequest(final HttpRequest request) {
         final RemoteAddress address;
         if (request.getMethod().equals(HttpMethod.CONNECT))
             address = parseString(request.getUri());
@@ -31,7 +31,7 @@ public class RemoteAddress {
         return address;
     }
 
-    public static RemoteAddress parseString(String uri) {
+    public static RemoteAddress parseString(final String uri) {
         final RemoteAddress address;
         if (uri.startsWith("http")) {
             // consider string as url
@@ -54,12 +54,12 @@ public class RemoteAddress {
     private final String  host;
     private final Integer port;
 
-    public RemoteAddress(String host, Integer port) {
+    public RemoteAddress(final String host, final Integer port) {
         this.host = host;
         this.port = port;
     }
 
-    public RemoteAddress(URL url) {
+    public RemoteAddress(final URL url) {
         host = url.getHost();
         port = url.getPort() == -1 ? 80 : url.getPort();
     }
@@ -73,7 +73,7 @@ public class RemoteAddress {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (obj instanceof RemoteAddress) {
             RemoteAddress other = (RemoteAddress) obj;
             return other.getHost().equals(host) && other.getPort() == port;
