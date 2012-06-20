@@ -30,11 +30,13 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
+import org.jboss.netty.handler.codec.spdy.DefaultSpdySettingsFrame;
 import org.jboss.netty.handler.codec.spdy.SpdyFrameDecoder;
 import org.jboss.netty.handler.codec.spdy.SpdyFrameEncoder;
 import org.jboss.netty.handler.codec.spdy.SpdyHttpDecoder;
 import org.jboss.netty.handler.codec.spdy.SpdyHttpEncoder;
 import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
+import org.jboss.netty.handler.codec.spdy.SpdySettingsFrame;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
@@ -91,6 +93,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("decoder", new SpdyFrameDecoder(3));
                 pipeline.addLast("encoder", new SpdyFrameEncoder(3, 9, 15, 8));
                 pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
+                pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
                 pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
                 pipeline.addLast("handler", new HttpProxyHandler());
@@ -135,5 +138,25 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
             return selectedProtocol;
         }
 
+    }
+
+    private final class SpdySetupHandler implements ChannelUpstreamHandler {
+
+        private boolean setupComplete = false;
+
+        @Override
+        public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent evt) {
+            if (!setupComplete && ctx.getChannel().isConnected()) {
+                log.info("Channel {} - apply default setup", ctx.getChannel().getId());
+                setupComplete = true;
+                SpdySettingsFrame frame = new DefaultSpdySettingsFrame();
+                frame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 250);
+                frame.setValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE, 65536);
+                frame.setValue(SpdySettingsFrame.SETTINGS_ROUND_TRIP_TIME, 200);
+                ctx.getChannel().write(frame);
+            }
+
+            ctx.sendUpstream(evt);
+        }
     }
 }
