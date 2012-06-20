@@ -82,7 +82,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         // set actions when response arrives
         final HttpPluginHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginHandler.class);
         outboundHandler.setResponsePlugins(PluginProvider.getInstance().getResponsePlugins(request));
-        outboundHandler.setResponseListener(new ProxyResponseListener(request, e.getChannel()));
+        outboundHandler.addResponseListener(new ProxyResponseListener(request, e.getChannel()));
 
         // perform request on outbound channel
         request.removeHeader(SPDY_STREAM_ID);

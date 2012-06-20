@@ -15,6 +15,7 @@ package org.jlange.proxy.outbound;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -37,26 +38,16 @@ import org.slf4j.LoggerFactory;
 
 public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger         log = LoggerFactory.getLogger(getClass());
-    private HttpResponseListener httpResponseListener;
-    private List<ResponsePlugin> responsePlugins;
+    private final Logger                log = LoggerFactory.getLogger(getClass());
+    private Queue<HttpResponseListener> httpResponseListenerQueue;
+    private List<ResponsePlugin>        responsePlugins;
 
-    public void setResponseListener(final HttpResponseListener httpResponseListener) {
-        this.httpResponseListener = httpResponseListener;
+    public HttpPluginHandler() {
+        httpResponseListenerQueue = new LinkedList<HttpResponseListener>();
     }
 
-    public HttpResponseListener getHttpResponseListener() {
-        // get the response listener only once, so that the response can only get written once
-        // TODO: maybe a queue would be useful here
-        if (this.httpResponseListener != null) {
-            HttpResponseListener httpResponseListener = this.httpResponseListener;
-            this.httpResponseListener = null;
-            return httpResponseListener;
-        } else
-            return new HttpResponseListener() {
-                @Override
-                public void responseReceived(HttpResponse response) {}
-            };
+    public void addResponseListener(final HttpResponseListener httpResponseListener) {
+        this.httpResponseListenerQueue.add(httpResponseListener);
     }
 
     public void setResponsePlugins(final List<ResponsePlugin> responsePlugins) {
@@ -90,7 +81,7 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         e.getChannel().close();
 
-        getHttpResponseListener().responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
+        responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
 
     @Override
@@ -98,7 +89,7 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         log.info("Channel {} - closed", e.getChannel().getId());
 
         // if there is a response listener left inform it about not received a valid response
-        getHttpResponseListener().responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
+        responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
 
     @Override
@@ -119,11 +110,17 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
             }
         }
 
-        getHttpResponseListener().responseReceived(response);
+        responseReceived(response);
 
         if (isKeepAlive)
             e.getFuture().addListener(OutboundChannelPool.IDLE);
         else
             e.getFuture().addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private void responseReceived(final HttpResponse response) {
+        HttpResponseListener httpResponseListener;
+        while ((httpResponseListener = httpResponseListenerQueue.poll()) != null)
+            httpResponseListener.responseReceived(response);
     }
 }
