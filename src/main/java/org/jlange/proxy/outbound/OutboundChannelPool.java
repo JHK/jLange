@@ -159,7 +159,7 @@ public class OutboundChannelPool {
             isChannelIdle = new HashMap<Integer, Boolean>();
         }
 
-        public void addUsedChannelId(final RemoteAddress address, final Integer channelId) {
+        public synchronized void addUsedChannelId(final RemoteAddress address, final Integer channelId) {
             Queue<Integer> channelIds = getChannelIds(address);
             channelIds.add(channelId);
             isChannelIdle.put(channelId, false);
@@ -175,14 +175,14 @@ public class OutboundChannelPool {
                 }
         }
 
-        public Integer getIdleChannelId(final RemoteAddress address) {
+        public synchronized Integer getIdleChannelId(final RemoteAddress address) {
             for (Integer channelId : getChannelIds(address))
                 if (isChannelIdle.get(channelId))
                     return channelId;
             return null;
         }
 
-        private Queue<Integer> getChannelIds(RemoteAddress address) {
+        private synchronized Queue<Integer> getChannelIds(RemoteAddress address) {
             Queue<Integer> channelIds = channels.get(address);
             if (channelIds == null) {
                 channelIds = new LinkedList<Integer>();
@@ -194,14 +194,14 @@ public class OutboundChannelPool {
         /**
          * Moves a channel id from idle to used queue
          */
-        public void useChannelId(final Integer channelId) {
+        public synchronized void useChannelId(final Integer channelId) {
             isChannelIdle.put(channelId, false);
         }
 
         /**
          * Moves a channel id from used to idle queue
          */
-        public void idleChannelId(final Integer channelId) {
+        public synchronized void idleChannelId(final Integer channelId) {
             isChannelIdle.put(channelId, true);
         }
 
