@@ -136,7 +136,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         }
 
         @Override
-        public void responseReceived(HttpResponse response) {
+        public void responseReceived(final HttpResponse response) {
             // SPDY
             if (spdyStreamId != null) {
                 response.setHeader(SPDY_STREAM_ID, spdyStreamId);
