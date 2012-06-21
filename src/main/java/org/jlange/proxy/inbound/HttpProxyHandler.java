@@ -31,7 +31,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.HttpPipelineFactory;
-import org.jlange.proxy.outbound.HttpPluginHandler;
+import org.jlange.proxy.outbound.HttpPluginResponseHandler;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.util.HttpResponseListener;
@@ -80,7 +80,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         log.info("Channel {} - using outboundchannel {}", channelId, outboundFuture.getChannel().getId());
 
         // set actions when response arrives
-        final HttpPluginHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginHandler.class);
+        final HttpPluginResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginResponseHandler.class);
         outboundHandler.setResponsePlugins(PluginProvider.getInstance().getResponsePlugins(request));
         outboundHandler.addResponseListener(new ProxyResponseListener(request, e.getChannel()));
 

@@ -14,7 +14,6 @@
 package org.jlange.proxy.outbound;
 
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
@@ -31,18 +30,16 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     private final Logger                log = LoggerFactory.getLogger(getClass());
     private Queue<HttpResponseListener> httpResponseListenerQueue;
-    private List<ResponsePlugin>        responsePlugins;
 
-    public HttpPluginHandler() {
+    public HttpResponseHandler() {
         httpResponseListenerQueue = new LinkedList<HttpResponseListener>();
     }
 
@@ -50,23 +47,7 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         this.httpResponseListenerQueue.add(httpResponseListener);
     }
 
-    public void setResponsePlugins(final List<ResponsePlugin> responsePlugins) {
-        this.responsePlugins = responsePlugins;
-    }
-
-    public List<ResponsePlugin> getResponsePlugins() {
-        if (responsePlugins != null)
-            return responsePlugins;
-        else
-            return new LinkedList<ResponsePlugin>();
-    }
-
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
-        // request plugins
-        // TODO: implement
-        request.setProtocolVersion(HttpVersion.HTTP_1_1);
-        HttpHeaders.setKeepAlive(request, true);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
@@ -87,9 +68,6 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
     @Override
     public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
         log.info("Channel {} - closed", e.getChannel().getId());
-
-        // if there is a response listener left inform it about not received a valid response
-        responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
 
     @Override
@@ -99,23 +77,12 @@ public class HttpPluginHandler extends SimpleChannelUpstreamHandler implements C
         log.info("Channel {} - response received - {}", e.getChannel().getId(), response.getStatus().toString());
         log.debug(response.toString());
 
-        Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
-
-        // apply plugins
-        for (ResponsePlugin plugin : getResponsePlugins()) {
-            if (plugin.isApplicable(response)) {
-                log.info("Channel {} - using plugin {}", e.getChannel().getId(), plugin.getClass().getName());
-                plugin.run(response);
-                plugin.updateResponse(response);
-            }
-        }
-
-        responseReceived(response);
-
-        if (isKeepAlive)
+        if (HttpHeaders.isKeepAlive(response))
             e.getFuture().addListener(OutboundChannelPool.IDLE);
         else
             e.getFuture().addListener(ChannelFutureListener.CLOSE);
+
+        responseReceived(response);
     }
 
     private void responseReceived(final HttpResponse response) {
