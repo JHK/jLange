@@ -41,7 +41,7 @@ public class Compressor implements ResponsePlugin {
         compressor.setCompressCss(true);
         compressor.setCompressJavaScript(true);
         compressor.setRemoveComments(true);
-        compressor.setRemoveIntertagSpaces(true);
+        compressor.setRemoveIntertagSpaces(false);
         compressor.setRemoveScriptAttributes(true);
         compressor.setRemoveQuotes(true);
         compressor.setSimpleBooleanAttributes(true);
