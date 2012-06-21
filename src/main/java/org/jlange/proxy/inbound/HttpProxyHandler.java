@@ -77,7 +77,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         final ChannelPipelineFactory factory = new HttpPipelineFactory();
         final RemoteAddress address = RemoteAddress.parseRequest(request);
         final ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleOrNewChannelFuture(address, factory);
-        log.info("Channel {} - using outboundchannel {}", channelId, outboundFuture.getChannel().getId());
+        log.debug("Channel {} - using outboundchannel {}", channelId, outboundFuture.getChannel().getId());
 
         // set actions when response arrives
         final HttpPluginResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginResponseHandler.class);
