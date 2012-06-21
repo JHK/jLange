@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.outbound;
 
+import java.net.ConnectException;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -51,17 +52,26 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
-                log.info("Channel {} - sending request - {}", future.getChannel().getId(), request.getUri());
-                future.getChannel().write(request);
+                if (future.isSuccess()) {
+                    log.info("Channel {} - sending request - {}", future.getChannel().getId(), request.getUri());
+                    future.getChannel().write(request);
+                } else {
+                    log.info("Channel {} - could not send request - {}", future.getChannel().getId(), request.getUri());
+                }
             }
         });
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        e.getChannel().close();
-
+        if (e.getCause() instanceof ConnectException) {
+            // connection timed out
+            log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        } else {
+            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+            e.getCause().printStackTrace();
+            e.getChannel().close();
+        }
         responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));
     }
 
