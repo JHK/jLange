@@ -16,9 +16,14 @@ package org.jlange.proxy.inbound;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineFactory;
@@ -82,7 +87,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         // set actions when response arrives
         final HttpPluginResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginResponseHandler.class);
         outboundHandler.setResponsePlugins(PluginProvider.getInstance().getResponsePlugins(request));
-        outboundHandler.addResponseListener(new ProxyResponseListener(request, e.getChannel()));
+        outboundHandler.addResponseListener(new ProxyPipelineResponseListener(request, e.getChannel()));
 
         // perform request on outbound channel
         request.removeHeader(SPDY_STREAM_ID);
@@ -158,6 +163,56 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
                 // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
                 log.info("Channel {} - try to send response to closed channel - skipped", channelId);
         }
+    }
 
+    /**
+     * If the channel is used for HTTP1.1 pipelines we have to keep track of the order of sent responses on a channel
+     */
+    private final Queue<HttpRequest>             requestPipeline  = new LinkedList<HttpRequest>();
+    private final Map<HttpRequest, HttpResponse> responsePipeline = new HashMap<HttpRequest, HttpResponse>();
+
+    private class ProxyPipelineResponseListener implements HttpResponseListener {
+
+        private final Channel     channel;
+        private final HttpRequest request;
+
+        public ProxyPipelineResponseListener(final HttpRequest request, final Channel channel) {
+            this.request = request;
+            this.channel = channel;
+            requestPipeline.add(request);
+        }
+
+        @Override
+        public synchronized void responseReceived(final HttpResponse response) {
+            // modify response headers
+            response.setProtocolVersion(HttpVersion.HTTP_1_1);
+            HttpHeaders.setKeepAlive(response, true);
+
+            responsePipeline.put(request, response);
+
+            if (request.equals(requestPipeline.peek()))
+                sendResponse(request);
+        }
+
+        private void sendResponse(final HttpRequest request) {
+            HttpResponse response = responsePipeline.get(request);
+
+            if (request == null || response == null)
+                return;
+
+            log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
+            log.debug(response.toString());
+
+            // the received response matches to the first request in queue, start writing
+            responsePipeline.remove(requestPipeline.poll());
+            channel.write(response).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(final ChannelFuture future) {
+                    if (future.isSuccess())
+                        sendResponse(requestPipeline.peek());
+                }
+            });
+
+        }
     }
 }
