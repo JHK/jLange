@@ -101,9 +101,11 @@ public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
                 log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
                 log.debug(response.toString());
 
-                if (!channel.isConnected())
+                if (!channel.isConnected()) {
                     // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
                     log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
+                    return;
+                }
 
                 // the received response matches to the first request in queue, start writing
                 channel.write(response).addListener(new ChannelFutureListener() {
