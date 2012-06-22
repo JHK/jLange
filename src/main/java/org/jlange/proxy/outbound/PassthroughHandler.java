@@ -30,7 +30,7 @@ public class PassthroughHandler extends SimpleChannelUpstreamHandler {
 
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
         log.info("Channel {} - closed", e.getChannel().getId());
-        if (otherChannel.isConnected())
+        if (otherChannel != null && otherChannel.isConnected())
             otherChannel.close();
     }
 
