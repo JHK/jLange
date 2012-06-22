@@ -19,10 +19,8 @@ import java.util.List;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,9 +34,6 @@ public class HttpPluginResponseHandler extends HttpResponseHandler {
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
         // request plugins
         // TODO: implement
-        request.setProtocolVersion(HttpVersion.HTTP_1_1);
-        HttpHeaders.setKeepAlive(request, true);
-
         super.sendRequest(future, request);
     }
 
@@ -46,7 +41,7 @@ public class HttpPluginResponseHandler extends HttpResponseHandler {
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
         final HttpResponse response = (HttpResponse) e.getMessage();
 
-        // apply plugins
+        // response plugins
         for (ResponsePlugin plugin : getResponsePlugins()) {
             if (plugin.isApplicable(response)) {
                 log.info("Channel {} - using plugin {}", e.getChannel().getId(), plugin.getClass().getName());

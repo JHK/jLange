@@ -90,29 +90,12 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
         outboundHandler.addResponseListener(new ProxyPipelineResponseListener(request, e.getChannel()));
 
         // perform request on outbound channel
-        request.removeHeader(SPDY_STREAM_ID);
-        request.removeHeader(PROXY_CONNECTION);
-        if (request.getUri().startsWith(HTTP_SCHEMA))
-            updateRequestUri(request);
         outboundHandler.sendRequest(outboundFuture, request);
     }
 
     @Override
     public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
         log.info("Channel {} - closed", e.getChannel().getId());
-    }
-
-    private void updateRequestUri(final HttpRequest request) {
-        try {
-            final URL url = new URL(request.getUri());
-            final StringBuilder sb = new StringBuilder();
-            sb.append(url.getPath());
-            if (url.getQuery() != null)
-                sb.append("?").append(url.getQuery());
-            request.setUri(sb.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
     }
 
     private String getLogChannelId(final HttpRequest request, final Channel channel) {
