@@ -43,6 +43,9 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         log.info("Channel {} - request received - {}", getLogChannelId(request, e.getChannel()), request.getUri());
         log.debug(request.toString());
 
+        // FIXME: we need to have a max connection count per host to remove that
+        HttpHeaders.setKeepAlive(request, false);
+        
         super.messageReceived(ctx, e);
     }
 

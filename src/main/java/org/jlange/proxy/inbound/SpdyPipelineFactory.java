@@ -150,7 +150,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 log.info("Channel {} - apply default setup", ctx.getChannel().getId());
                 setupComplete = true;
                 SpdySettingsFrame frame = new DefaultSpdySettingsFrame();
-                frame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 250);
+                frame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 16);
                 frame.setValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE, 65536);
                 frame.setValue(SpdySettingsFrame.SETTINGS_ROUND_TRIP_TIME, 200);
                 ctx.getChannel().write(frame);

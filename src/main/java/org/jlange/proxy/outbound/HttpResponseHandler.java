@@ -53,10 +53,13 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
 
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
         // update request headers before sending
-        HttpHeaders.setKeepAlive(request, true);
         request.setProtocolVersion(HttpVersion.HTTP_1_1);
         request.removeHeader(HttpHeaders2.SPDY.STREAM_ID);
         request.removeHeader(HttpHeaders2.Proxy.CONNECTION);
+
+        // FIXME: keep alive should be enabled always, but we need max connections per host
+        if (HttpHeaders.getHeader(request, HttpHeaders.Names.CONNECTION) == null)
+            HttpHeaders.setKeepAlive(request, true);
 
         if (request.getUri().toLowerCase().startsWith("http"))
             updateRequestUri(request);
