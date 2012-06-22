@@ -22,6 +22,8 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -34,6 +36,17 @@ import org.slf4j.LoggerFactory;
 public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
+
+    @Override
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+        final HttpRequest request = (HttpRequest) e.getMessage();
+
+        // just for logging
+        log.info("Channel {} - request received - {}", e.getChannel().getId(), request.getUri());
+        log.debug(request.toString());
+
+        super.messageReceived(ctx, e);
+    }
 
     @Override
     protected HttpResponseListener getHttpResponseListener(final HttpRequest request, final Channel channel) {

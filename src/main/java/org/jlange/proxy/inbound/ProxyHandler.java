@@ -42,10 +42,6 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
-        // just for logging
-        log.info("Channel {} - request received - {}", e.getChannel().getId(), request.getUri());
-        log.debug(request.toString());
-
         // request to predefined response plugins
         // TODO: implement
 
