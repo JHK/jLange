@@ -13,12 +13,9 @@
  */
 package org.jlange.proxy.inbound;
 
-import java.io.IOException;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -47,15 +44,6 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         log.debug(request.toString());
 
         super.messageReceived(ctx, e);
-    }
-
-    @Override
-    public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        if (e.getCause() instanceof IOException) {
-            log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        } else {
-            super.exceptionCaught(ctx, e);
-        }
     }
 
     private String getLogChannelId(final HttpRequest request, final Channel channel) {
