@@ -184,35 +184,47 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
         @Override
         public synchronized void responseReceived(final HttpResponse response) {
+            log.debug("Channel {} - response received for request {}", channel.getId(), request.getUri());
+
             // modify response headers
             response.setProtocolVersion(HttpVersion.HTTP_1_1);
             HttpHeaders.setKeepAlive(response, true);
 
-            responsePipeline.put(request, response);
+            // we try to synchronize threads with responses. This allows more code to run in parallel
+            synchronized (responsePipeline) {
+                responsePipeline.put(request, response);
+            }
 
             if (request.equals(requestPipeline.peek()))
-                sendResponse(request);
+                sendResponse(requestPipeline.poll());
         }
 
         private void sendResponse(final HttpRequest request) {
-            HttpResponse response = responsePipeline.get(request);
+            synchronized (responsePipeline) {
+                HttpResponse response = responsePipeline.remove(request);
 
-            if (request == null || response == null)
-                return;
+                log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
+                log.debug(response.toString());
 
-            log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
-            log.debug(response.toString());
+                if (!channel.isConnected())
+                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                    log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
 
-            // the received response matches to the first request in queue, start writing
-            responsePipeline.remove(requestPipeline.poll());
-            channel.write(response).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture future) {
-                    if (future.isSuccess())
-                        sendResponse(requestPipeline.peek());
-                }
-            });
+                // the received response matches to the first request in queue, start writing
+                channel.write(response).addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(final ChannelFuture future) {
+                        if (!future.isSuccess())
+                            return;
 
+                        // send next response if available
+                        synchronized (responsePipeline) {
+                            if (responsePipeline.containsKey(requestPipeline.peek()))
+                                sendResponse(requestPipeline.poll());
+                        }
+                    }
+                });
+            }
         }
     }
 }
