@@ -28,12 +28,12 @@ public class IdleShutdownHandler extends IdleStateHandler implements ChannelHand
     
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    public IdleShutdownHandler(int readerIdleTimeSeconds, int writerIdleTimeSeconds) {
+    public IdleShutdownHandler(final int readerIdleTimeSeconds, final int writerIdleTimeSeconds) {
         super(timer, readerIdleTimeSeconds, writerIdleTimeSeconds, 0);
     }
 
     @Override
-    protected void channelIdle(ChannelHandlerContext ctx, IdleState state, long lastActivityTimeMillis) throws Exception {
+    protected void channelIdle(final ChannelHandlerContext ctx, final IdleState state, final long lastActivityTimeMillis) {
         log.info("Channel {} - shutdown due idle time exceeded", ctx.getChannel().getId());
         ctx.getChannel().close();
     }
