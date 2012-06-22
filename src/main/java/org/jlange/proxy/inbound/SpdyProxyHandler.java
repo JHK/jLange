@@ -69,20 +69,28 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         return channelId;
     }
 
+    /**
+     * Writes the received responses as fast as possible on the corresponding channel.
+     */
     private class ProxyResponseListener implements HttpResponseListener {
 
         private final String  channelId;
         private final String  spdyStreamId;
         private final Channel channel;
+        private final String  requestUri;
 
         public ProxyResponseListener(final HttpRequest request, final Channel channel) {
+            requestUri = request.getUri();
             channelId = getLogChannelId(request, channel);
             spdyStreamId = HttpHeaders.getHeader(request, HttpHeaders2.SPDY.STREAM_ID);
             this.channel = channel;
         }
 
         @Override
-        public void responseReceived(final HttpResponse response) {
+        public synchronized void responseReceived(final HttpResponse response) {
+            log.info("Channel {} - sending response - {} for " + requestUri, channelId, response.getStatus());
+            log.debug("{}", response);
+
             // Protocol Version
             response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
@@ -90,14 +98,13 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
             response.setHeader(HttpHeaders2.SPDY.STREAM_ID, spdyStreamId);
             response.setHeader(HttpHeaders2.SPDY.STREAM_PRIO, 0);
 
-            log.info("Channel {} - sending response - {}", channelId, response.getStatus());
-            log.debug(response.toString());
-
-            if (channel.isConnected())
-                channel.write(response);
-            else
+            if (!channel.isConnected()) {
                 // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                log.info("Channel {} - try to send response to closed channel - skipped", channelId);
+                log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
+                return;
+            }
+
+            channel.write(response);
         }
     }
 }
