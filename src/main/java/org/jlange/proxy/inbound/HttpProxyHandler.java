@@ -58,7 +58,7 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
         log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         if (!e.getCause().getClass().equals(IOException.class)) {
-            e.getCause().printStackTrace();
+            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
         }
     }
 

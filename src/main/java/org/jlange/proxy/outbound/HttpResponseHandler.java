@@ -69,7 +69,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
             log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         } else {
             log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-            e.getCause().printStackTrace();
+            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
             e.getChannel().close();
         }
         responseReceived(new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY));

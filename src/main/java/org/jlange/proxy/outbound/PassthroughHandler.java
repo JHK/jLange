@@ -36,6 +36,7 @@ public class PassthroughHandler extends SimpleChannelUpstreamHandler {
 
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
         log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
         otherChannel.close();
         e.getChannel().close();
     }
