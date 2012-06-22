@@ -13,8 +13,6 @@
  */
 package org.jlange.proxy.inbound;
 
-import java.io.IOException;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
@@ -77,11 +75,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        if (e.getCause() instanceof IOException) {
-            log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        } else {
-            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
-        }
+        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+        log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
     }
 }
