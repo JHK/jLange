@@ -96,7 +96,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
                 pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
-                pipeline.addLast("handler", new HttpProxyHandler());
+                pipeline.addLast("handler", new SpdyProxyHandler());
 
                 // remove this handler, and process the requests as SPDY
                 pipeline.remove(this);

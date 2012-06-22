@@ -13,9 +13,6 @@
  */
 package org.jlange.proxy.inbound;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -25,131 +22,27 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.outbound.HttpPipelineFactory;
-import org.jlange.proxy.outbound.HttpPluginResponseHandler;
-import org.jlange.proxy.outbound.OutboundChannelPool;
-import org.jlange.proxy.plugin.PluginProvider;
+import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
-import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
 
-    private final static String PROXY_CONNECTION = "Proxy-Connection";
-    private final static String KEEP_ALIVE       = "keep-alive";
-    private final static String SPDY_STREAM_ID   = "X-SPDY-Stream-ID";
-    private final static String SPDY_STREAM_PRIO = "X-SPDY-Stream-Priority";
-    private final static String HTTP_SCHEMA      = "http";
-
-    private final Logger        log              = LoggerFactory.getLogger(getClass());
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     @Override
-    public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        if (!e.getCause().getClass().equals(IOException.class)) {
-            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
-        }
-    }
-
-    @Override
-    public void channelBound(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
-        log.info("Channel {} - created", e.getChannel().getId());
-    }
-
-    @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
-        final HttpRequest request = (HttpRequest) e.getMessage();
-
-        // just for logging
-        final String channelId = getLogChannelId(request, e.getChannel());
-        log.info("Channel {} - request received - {}", channelId, request.getUri());
-        log.debug(request.toString());
-
-        // request to predefined response plugins
-        // TODO: implement
-
-        final ChannelPipelineFactory factory = new HttpPipelineFactory();
-        final RemoteAddress address = RemoteAddress.parseRequest(request);
-        final ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleOrNewChannelFuture(address, factory);
-        log.debug("Channel {} - using outboundchannel {}", channelId, outboundFuture.getChannel().getId());
-
-        // set actions when response arrives
-        final HttpPluginResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpPluginResponseHandler.class);
-        outboundHandler.setResponsePlugins(PluginProvider.getInstance().getResponsePlugins(request));
-        outboundHandler.addResponseListener(new ProxyPipelineResponseListener(request, e.getChannel()));
-
-        // perform request on outbound channel
-        outboundHandler.sendRequest(outboundFuture, request);
-    }
-
-    @Override
-    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
-        log.info("Channel {} - closed", e.getChannel().getId());
-    }
-
-    private String getLogChannelId(final HttpRequest request, final Channel channel) {
-        String channelId = null;
-        if (log.isInfoEnabled()) {
-            channelId = channel.getId().toString();
-            final String spdyStreamId = HttpHeaders.getHeader(request, SPDY_STREAM_ID);
-            if (spdyStreamId != null)
-                channelId += "+" + spdyStreamId;
-        }
-        return channelId;
-    }
-
-    private class ProxyResponseListener implements HttpResponseListener {
-
-        private final String  channelId;
-        private final String  spdyStreamId;
-        private final Channel channel;
-        private final Boolean proxyKeepAlive;
-
-        public ProxyResponseListener(final HttpRequest request, final Channel channel) {
-            channelId = getLogChannelId(request, channel);
-            spdyStreamId = HttpHeaders.getHeader(request, SPDY_STREAM_ID);
-            proxyKeepAlive = HttpHeaders.getHeader(request, PROXY_CONNECTION, KEEP_ALIVE).toLowerCase().equals(KEEP_ALIVE);
-            this.channel = channel;
-        }
-
-        @Override
-        public void responseReceived(final HttpResponse response) {
-            // SPDY
-            if (spdyStreamId != null) {
-                response.setHeader(SPDY_STREAM_ID, spdyStreamId);
-                response.setHeader(SPDY_STREAM_PRIO, 0);
-            }
-
-            // HTTP Version for proxy
-            response.setProtocolVersion(HttpVersion.HTTP_1_1);
-
-            // Keep alive
-            HttpHeaders.setKeepAlive(response, proxyKeepAlive);
-
-            log.info("Channel {} - sending response - {}", channelId, response.getStatus());
-            log.debug(response.toString());
-
-            if (channel.isConnected())
-                channel.write(response);
-            else
-                // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                log.info("Channel {} - try to send response to closed channel - skipped", channelId);
-        }
+    protected HttpResponseListener getHttpResponseListener(final HttpRequest request, final Channel channel) {
+        return new ProxyPipelineResponseListener(request, channel);
     }
 
     /**
-     * If the channel is used for HTTP1.1 pipelines we have to keep track of the order of sent responses on a channel
+     * If the channel is used for HTTP1.1 pipelines the order of sent responses must be the same than we got the requests. The Queue
+     * requestPipeline stores the order of the requests and the Map responsePipeline stores the corresponding responses.
      */
     private final Queue<HttpRequest>             requestPipeline  = new LinkedList<HttpRequest>();
     private final Map<HttpRequest, HttpResponse> responsePipeline = new HashMap<HttpRequest, HttpResponse>();
@@ -158,26 +51,32 @@ public class HttpProxyHandler extends SimpleChannelUpstreamHandler implements Ch
 
         private final Channel     channel;
         private final HttpRequest request;
+        private final Boolean     proxyKeepAlive;
 
         public ProxyPipelineResponseListener(final HttpRequest request, final Channel channel) {
             this.request = request;
             this.channel = channel;
             requestPipeline.add(request);
+            proxyKeepAlive = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION).equals(HttpHeaders.Values.KEEP_ALIVE);
         }
 
         @Override
         public synchronized void responseReceived(final HttpResponse response) {
             log.debug("Channel {} - response received for request {}", channel.getId(), request.getUri());
 
-            // modify response headers
+            // set protocol version
             response.setProtocolVersion(HttpVersion.HTTP_1_1);
-            HttpHeaders.setKeepAlive(response, true);
+
+            // Keep alive
+            if (proxyKeepAlive != null)
+                HttpHeaders.setKeepAlive(response, proxyKeepAlive);
 
             // we try to synchronize threads with responses. This allows more code to run in parallel
             synchronized (responsePipeline) {
                 responsePipeline.put(request, response);
             }
 
+            // if this response is the first one in queue, start transmitting
             if (request.equals(requestPipeline.peek()))
                 sendResponse(requestPipeline.poll());
         }
