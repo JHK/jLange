@@ -87,6 +87,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
         // response plugins and response listener
         // they need to be first one in place, because the response may depend on the original request (like special proxy headers)
         final List<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
+        // TODO error response handling
         httpResponseListenerList.add(getProtocolHttpResponseListener(request));
         httpResponseListenerList.add(getPluginHttpResponseListener(request));
         httpResponseListenerList.add(getWriteHttpResponseListener(request, inboundChannel));
@@ -139,7 +140,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
             if (url.getQuery() != null)
                 sb.append("?").append(url.getQuery());
             request.setUri(sb.toString());
-            
+
             //TODO: check if header 'host' needs to get updated
         } catch (MalformedURLException e) {
             e.printStackTrace();
