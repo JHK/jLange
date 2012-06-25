@@ -37,7 +37,7 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     @Override
-    protected HttpResponseListener getHttpResponseListener(final HttpRequest request, final Channel channel) {
+    protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
         return new ProxyResponseListener(request, channel);
     }
 
@@ -53,7 +53,27 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         super.messageReceived(ctx, e);
     }
 
-    private Integer getSpdyStreamId(final HttpMessage message) {
+    @Override
+    protected HttpResponseListener getProtocolHttpResponseListener(final HttpRequest request) {
+
+        final Integer spdyStreamId = getSpdyStreamId(request);
+
+        return new HttpResponseListener() {
+            @Override
+            public void responseReceived(final HttpResponse response) {
+                // Protocol Version
+                response.setProtocolVersion(HttpVersion.HTTP_1_1);
+
+                // SPDY
+                response.setHeader(HttpHeaders2.SPDY.STREAM_ID, spdyStreamId);
+                response.setHeader(HttpHeaders2.SPDY.STREAM_PRIO, 0);
+                response.removeHeader(HttpHeaders.Names.CONNECTION);
+                response.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
+            }
+        };
+    }
+
+    private static Integer getSpdyStreamId(final HttpMessage message) {
         final Integer spdyStreamId = HttpHeaders.getIntHeader(message, HttpHeaders2.SPDY.STREAM_ID, -1);
         return spdyStreamId;
     }
@@ -65,28 +85,16 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
      */
     private class ProxyResponseListener implements HttpResponseListener {
 
-        private final Integer spdyStreamId;
         private final Channel channel;
         private final String  requestUri;
 
         public ProxyResponseListener(final HttpRequest request, final Channel channel) {
             requestUri = request.getUri();
-            spdyStreamId = getSpdyStreamId(request);
             this.channel = channel;
         }
 
         @Override
         public void responseReceived(final HttpResponse response) {
-
-            // Protocol Version
-            response.setProtocolVersion(HttpVersion.HTTP_1_1);
-
-            // SPDY
-            response.setHeader(HttpHeaders2.SPDY.STREAM_ID, spdyStreamId);
-            response.setHeader(HttpHeaders2.SPDY.STREAM_PRIO, 0);
-            response.removeHeader(HttpHeaders.Names.CONNECTION);
-            response.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-
             log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), requestUri);
 
             synchronized (responseQueue) {

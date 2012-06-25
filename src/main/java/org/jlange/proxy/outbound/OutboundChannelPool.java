@@ -81,13 +81,6 @@ public class OutboundChannelPool {
         channelIdPool = new ChannelIdPool();
     }
 
-    public ChannelFuture getIdleOrNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
-        ChannelFuture future = getIdleChannelFuture(address);
-        if (future == null)
-            future = getNewChannelFuture(address, channelPipelineFactory);
-        return future;
-    }
-
     public ChannelFuture getNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
         // setup client
         final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);

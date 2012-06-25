@@ -14,8 +14,6 @@
 package org.jlange.proxy.outbound;
 
 import java.net.ConnectException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -33,7 +31,6 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,12 +51,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
         // update request headers before sending
         request.setProtocolVersion(HttpVersion.HTTP_1_1);
-        request.removeHeader(HttpHeaders2.SPDY.STREAM_ID);
-        request.removeHeader(HttpHeaders2.Proxy.CONNECTION);
         HttpHeaders.setKeepAlive(request, true);
-
-        if (request.getUri().toLowerCase().startsWith("http"))
-            updateRequestUri(request);
 
         future.addListener(new ChannelFutureListener() {
             @Override
@@ -111,18 +103,5 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         HttpResponseListener httpResponseListener;
         while ((httpResponseListener = httpResponseListenerQueue.poll()) != null)
             httpResponseListener.responseReceived(response);
-    }
-
-    private void updateRequestUri(final HttpRequest request) {
-        try {
-            final URL url = new URL(request.getUri());
-            final StringBuilder sb = new StringBuilder();
-            sb.append(url.getPath());
-            if (url.getQuery() != null)
-                sb.append("?").append(url.getQuery());
-            request.setUri(sb.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
     }
 }

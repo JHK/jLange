@@ -35,11 +35,20 @@ import org.slf4j.LoggerFactory;
 
 public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private final Logger                         log              = LoggerFactory.getLogger(getClass());
+
+    /**
+     * If the channel is used for HTTP1.1 pipelines the order of sent responses must be the same than we got the requests. The Queue
+     * requestPipeline stores the order of the requests and the Map responsePipeline stores the corresponding responses.
+     */
+    private final Queue<HttpRequest>             requestPipeline  = new LinkedList<HttpRequest>();
+    private final Map<HttpRequest, HttpResponse> responsePipeline = new HashMap<HttpRequest, HttpResponse>();
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
         final HttpRequest request = (HttpRequest) e.getMessage();
+
+        requestPipeline.add(request);
 
         // just for logging
         log.info("Channel {} - request received - {}", e.getChannel().getId(), request.getUri());
@@ -49,79 +58,71 @@ public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
     }
 
     @Override
-    protected HttpResponseListener getHttpResponseListener(final HttpRequest request, final Channel channel) {
-        return new ProxyPipelineResponseListener(request, channel);
-    }
+    protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
 
-    /**
-     * If the channel is used for HTTP1.1 pipelines the order of sent responses must be the same than we got the requests. The Queue
-     * requestPipeline stores the order of the requests and the Map responsePipeline stores the corresponding responses.
-     */
-    private final Queue<HttpRequest>             requestPipeline  = new LinkedList<HttpRequest>();
-    private final Map<HttpRequest, HttpResponse> responsePipeline = new HashMap<HttpRequest, HttpResponse>();
+        return new HttpResponseListener() {
 
-    private class ProxyPipelineResponseListener implements HttpResponseListener {
+            @Override
+            public synchronized void responseReceived(final HttpResponse response) {
+                log.debug("Channel {} - response received for request {}", channel.getId(), request.getUri());
 
-        private final Channel     channel;
-        private final HttpRequest request;
-        private final Boolean     proxyKeepAlive;
-
-        public ProxyPipelineResponseListener(final HttpRequest request, final Channel channel) {
-            this.request = request;
-            this.channel = channel;
-            requestPipeline.add(request);
-            proxyKeepAlive = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION).equals(HttpHeaders.Values.KEEP_ALIVE);
-        }
-
-        @Override
-        public synchronized void responseReceived(final HttpResponse response) {
-            log.debug("Channel {} - response received for request {}", channel.getId(), request.getUri());
-
-            // set protocol version
-            response.setProtocolVersion(HttpVersion.HTTP_1_1);
-
-            // Keep alive
-            if (proxyKeepAlive != null)
-                HttpHeaders.setKeepAlive(response, proxyKeepAlive);
-
-            // we try to synchronize threads with responses. This allows more code to run in parallel
-            synchronized (responsePipeline) {
-                responsePipeline.put(request, response);
-            }
-
-            // if this response is the first one in queue, start transmitting
-            if (request.equals(requestPipeline.peek()))
-                sendResponse(requestPipeline.poll());
-        }
-
-        private void sendResponse(final HttpRequest request) {
-            synchronized (responsePipeline) {
-                HttpResponse response = responsePipeline.remove(request);
-
-                log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
-                log.debug(response.toString());
-
-                if (!channel.isConnected()) {
-                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                    log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
-                    return;
+                // we try to synchronize threads with responses. This allows more code to run in parallel
+                synchronized (responsePipeline) {
+                    responsePipeline.put(request, response);
                 }
 
-                // the received response matches to the first request in queue, start writing
-                channel.write(response).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(final ChannelFuture future) {
-                        if (!future.isSuccess())
-                            return;
-
-                        // send next response if available
-                        synchronized (responsePipeline) {
-                            if (responsePipeline.containsKey(requestPipeline.peek()))
-                                sendResponse(requestPipeline.poll());
-                        }
-                    }
-                });
+                // if this response is the first one in queue, start transmitting
+                if (request.equals(requestPipeline.peek()))
+                    sendResponse(requestPipeline.poll());
             }
-        }
+
+            private void sendResponse(final HttpRequest request) {
+                synchronized (responsePipeline) {
+                    HttpResponse response = responsePipeline.remove(request);
+
+                    log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
+                    log.debug(response.toString());
+
+                    if (!channel.isConnected()) {
+                        // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                        log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
+                        return;
+                    }
+
+                    // the received response matches to the first request in queue, start writing
+                    channel.write(response).addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(final ChannelFuture future) {
+                            if (!future.isSuccess())
+                                return;
+
+                            // send next response if available
+                            synchronized (responsePipeline) {
+                                if (responsePipeline.containsKey(requestPipeline.peek()))
+                                    sendResponse(requestPipeline.poll());
+                            }
+                        }
+                    });
+                }
+            }
+        };
+    }
+
+    @Override
+    protected HttpResponseListener getProtocolHttpResponseListener(final HttpRequest request) {
+
+        final Boolean proxyKeepAlive = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION).equals(HttpHeaders.Values.KEEP_ALIVE);
+
+        return new HttpResponseListener() {
+            @Override
+            public void responseReceived(final HttpResponse response) {
+                // set protocol version
+                response.setProtocolVersion(HttpVersion.HTTP_1_1);
+
+                // Keep alive
+                if (proxyKeepAlive != null)
+                    HttpHeaders.setKeepAlive(response, proxyKeepAlive);
+            }
+        };
     }
 }

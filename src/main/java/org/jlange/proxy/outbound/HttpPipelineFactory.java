@@ -24,15 +24,21 @@ import org.jlange.proxy.util.IdleShutdownHandler;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 
-    public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = Channels.pipeline();
+    private final Integer timeout;
+
+    public HttpPipelineFactory(Integer timeout) {
+        this.timeout = timeout;
+    }
+
+    public ChannelPipeline getPipeline() {
+        final ChannelPipeline pipeline = Channels.pipeline();
 
         pipeline.addLast("encoder", new HttpRequestEncoder());
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(2 * 1024 * 1024));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-        pipeline.addLast("idle", new IdleShutdownHandler(0, 30));
-        pipeline.addLast("handler", new HttpPluginResponseHandler());
+        pipeline.addLast("idle", new IdleShutdownHandler(0, timeout));
+        pipeline.addLast("handler", new HttpResponseHandler());
 
         return pipeline;
     }
