@@ -16,13 +16,16 @@ package org.jlange.proxy.inbound;
 import java.net.InetSocketAddress;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -35,7 +38,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.OutboundChannelPool;
-import org.jlange.proxy.outbound.PassthroughHandler;
 import org.jlange.proxy.util.IdleShutdownHandler;
 import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
@@ -116,6 +118,38 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
             outboundPipeline.addLast("passthrough", new PassthroughHandler(target));
             outboundClient.setPipeline(outboundPipeline);
             return outboundClient.connect(new InetSocketAddress(address.getHost(), address.getPort()));
+        }
+    }
+
+    private final class PassthroughHandler extends SimpleChannelUpstreamHandler {
+
+        private final Channel otherChannel;
+
+        public PassthroughHandler(Channel otherChannel) {
+            this.otherChannel = otherChannel;
+        }
+
+        public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+            log.debug("Channel {} - message received", e.getChannel().getId());
+
+            final ChannelBuffer buffer = (ChannelBuffer) e.getMessage();
+
+            if (otherChannel.isConnected())
+                otherChannel.write(buffer);
+        }
+
+        public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+            log.info("Channel {} - closed", e.getChannel().getId());
+            if (otherChannel != null && otherChannel.isConnected())
+                otherChannel.close();
+        }
+
+        public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
+            if (otherChannel != null && otherChannel.isConnected())
+                otherChannel.close();
+            e.getChannel().close();
         }
     }
 }
