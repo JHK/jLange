@@ -36,24 +36,7 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
 
     private final Logger              log           = LoggerFactory.getLogger(getClass());
     private final Queue<HttpResponse> responseQueue = new LinkedList<HttpResponse>();
-
-    @Override
-    protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
-
-        return new HttpResponseListener() {
-
-            @Override
-            public void responseReceived(final HttpResponse response) {
-                log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
-
-                synchronized (responseQueue) {
-                    responseQueue.add(response);
-                    if (responseQueue.element().equals(response))
-                        sendResponse(channel, response);
-                }
-            }
-        };
-    }
+    private volatile Boolean          isSending     = false;
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
@@ -87,47 +70,71 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         };
     }
 
+    @Override
+    protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
+        return new HttpResponseListener() {
+            @Override
+            public synchronized void responseReceived(final HttpResponse response) {
+                log.info("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
+
+                synchronized (responseQueue) {
+                    responseQueue.add(response);
+                }
+
+                synchronized (isSending) {
+                    if (!isSending) {
+                        isSending = true;
+                        sendResponse();
+                    }
+                }
+            }
+
+            private void sendResponse() {
+                final HttpResponse response;
+                synchronized (responseQueue) {
+                    response = responseQueue.remove();
+                }
+
+                log.info("Stream {} - sending response - {}", getSpdyStreamId(response), response.getStatus());
+                log.debug(response.toString());
+
+                if (!channel.isConnected()) {
+                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                    log.info("Stream {} - try to send response to closed channel - skipped", getSpdyStreamId(response));
+                    removeAndSendNext();
+                    return;
+                }
+
+                if (getSpdyStreamId(response) == -1) {
+                    log.info("duplicated response in queue - skipped");
+                    removeAndSendNext();
+                    return;
+                }
+
+                ChannelFuture future = channel.write(response);
+                future.addListener(new ChannelFutureListener() {
+                    @Override
+                    public void operationComplete(final ChannelFuture future) {
+                        removeAndSendNext();
+                    }
+                });
+            }
+
+            private void removeAndSendNext() {
+                synchronized (responseQueue) {
+                    synchronized (isSending) {
+                        if (!responseQueue.isEmpty())
+                            sendResponse();
+                        else
+                            isSending = false;
+                    }
+                }
+            }
+        };
+    }
+
     private static Integer getSpdyStreamId(final HttpMessage message) {
         final Integer spdyStreamId = HttpHeaders.getIntHeader(message, HttpHeaders2.SPDY.STREAM_ID, -1);
         return spdyStreamId;
-    }
-
-    private void sendResponse(final Channel channel, final HttpResponse response) {
-        log.info("Stream {} - sending response - {}", getSpdyStreamId(response), response.getStatus());
-        log.debug(response.toString());
-
-        if (!channel.isConnected()) {
-            // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-            log.info("Stream {} - try to send response to closed channel - skipped", getSpdyStreamId(response));
-            synchronized (responseQueue) {
-                responseQueue.remove(response);
-                if (!responseQueue.isEmpty())
-                    sendResponse(channel, responseQueue.element());
-            }
-            return;
-        }
-
-        if (getSpdyStreamId(response) == -1) {
-            // FIXME why does this happen?
-            log.warn("Stream {} - invalid response!\n{}", getSpdyStreamId(response), response);
-            synchronized (responseQueue) {
-                responseQueue.remove(response);
-                if (!responseQueue.isEmpty())
-                    sendResponse(channel, responseQueue.element());
-            }
-            return;
-        }
-
-        ChannelFuture future = channel.write(response);
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(final ChannelFuture future) {
-                synchronized (responseQueue) {
-                    responseQueue.remove(response);
-                    if (!responseQueue.isEmpty())
-                        sendResponse(channel, responseQueue.element());
-                }
-            }
-        });
     }
 }
