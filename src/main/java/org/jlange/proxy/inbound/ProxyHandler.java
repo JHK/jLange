@@ -70,7 +70,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
                 // apply response plugins
                 for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins(request)) {
                     if (plugin.isApplicable(response)) {
-                        log.info("Using plugin {} - {}", plugin.getClass().getName(), request.getUri());
+                        log.debug("Using plugin {} - {}", plugin.getClass().getName(), request.getUri());
                         plugin.run(response);
                         plugin.updateResponse(response);
                     }

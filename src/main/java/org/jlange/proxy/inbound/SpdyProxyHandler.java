@@ -60,7 +60,7 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
         // just for logging
-        log.info("Channel {} - Stream {}", e.getChannel().getId(), getSpdyStreamId(request));
+        log.debug("Channel {} - Stream {}", e.getChannel().getId(), getSpdyStreamId(request));
         log.info("Stream {} - request received - {}", getSpdyStreamId(request), request.getUri());
         log.debug(request.toString());
 
