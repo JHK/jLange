@@ -40,18 +40,13 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
     @Override
     protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
 
-        final Integer spdyStreamId = getSpdyStreamId(request);
-
         return new HttpResponseListener() {
 
             @Override
             public void responseReceived(final HttpResponse response) {
+                log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
+
                 synchronized (responseQueue) {
-                    response.setHeader(HttpHeaders2.SPDY.STREAM_ID, spdyStreamId);
-                    response.setHeader(HttpHeaders2.SPDY.STREAM_PRIO, 0);
-
-                    log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
-
                     responseQueue.add(response);
                     if (responseQueue.element().equals(response))
                         sendResponse(channel, response);
@@ -75,6 +70,8 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
     @Override
     protected HttpResponseListener getProtocolHttpResponseListener(final HttpRequest request) {
 
+        final Integer spdyStreamId = getSpdyStreamId(request);
+
         return new HttpResponseListener() {
             @Override
             public void responseReceived(final HttpResponse response) {
@@ -82,6 +79,8 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
                 response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
                 // SPDY
+                response.setHeader(HttpHeaders2.SPDY.STREAM_ID, spdyStreamId);
+                response.setHeader(HttpHeaders2.SPDY.STREAM_PRIO, 0);
                 response.removeHeader(HttpHeaders.Names.CONNECTION);
                 response.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
             }
