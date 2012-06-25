@@ -89,8 +89,6 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
 
     private static Integer getSpdyStreamId(final HttpMessage message) {
         final Integer spdyStreamId = HttpHeaders.getIntHeader(message, HttpHeaders2.SPDY.STREAM_ID, -1);
-        if (spdyStreamId == -1 || spdyStreamId == null)
-            LoggerFactory.getLogger(SpdyProxyHandler.class).warn("Found invalid http message:\n{}", message);
         return spdyStreamId;
     }
 
