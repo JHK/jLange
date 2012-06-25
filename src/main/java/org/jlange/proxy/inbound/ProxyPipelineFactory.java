@@ -79,8 +79,10 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
                 outboundFuture.addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(final ChannelFuture future) {
-                        pipeline.getChannel().setReadable(false);
-                        pipeline.getChannel().write(getOkResponse()).addListener(updatePipeline);
+                        if (future.isSuccess()) {
+                            pipeline.getChannel().setReadable(false);
+                            pipeline.getChannel().write(getOkResponse()).addListener(updatePipeline);
+                        }
                     }
                 });
             } else {
