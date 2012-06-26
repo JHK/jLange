@@ -14,6 +14,7 @@
 package org.jlange.proxy.plugin;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -42,9 +43,11 @@ public class PluginProvider {
     }
 
     public List<ResponsePlugin> getResponsePlugins(final HttpRequest request) {
-        for (ResponsePlugin plugin : plugins)
-            if (!plugin.isApplicable(request))
-                plugins.remove(plugin);
+        List<ResponsePlugin> plugins = new LinkedList<ResponsePlugin>();
+        
+        for (ResponsePlugin plugin : this.plugins)
+            if (plugin.isApplicable(request))
+                plugins.add(plugin);
 
         return plugins;
     }
