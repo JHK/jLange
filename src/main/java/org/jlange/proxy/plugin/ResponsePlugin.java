@@ -33,14 +33,14 @@ public interface ResponsePlugin {
      * @return is the plugin applicable
      */
     public Boolean isApplicable(final HttpResponse response);
-    
+
     /**
      * Run the main code of the plugin. This is intended to run in parallel and the response may not be changed.
      * 
      * @param request {@link HttpRequest}
      * @param response matching {@link HttpResponse}
      */
-    public void run(final HttpResponse response);
+    public void run(final HttpRequest request, final HttpResponse response);
 
     /**
      * Update the response regarding the plugins intention.

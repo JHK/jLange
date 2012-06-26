@@ -59,7 +59,7 @@ public class Compressor implements ResponsePlugin {
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
     }
 
-    public void run(final HttpResponse response) {
+    public void run(final HttpRequest request, final HttpResponse response) {
         encoding = Tools.getCharset(response);
         content = response.getContent().toString(encoding);
 

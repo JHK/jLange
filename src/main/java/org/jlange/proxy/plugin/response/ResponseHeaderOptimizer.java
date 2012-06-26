@@ -30,9 +30,9 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
         return response != null && !response.getHeaders().isEmpty();
     }
 
-    public void run(final HttpResponse response) {}
+    public void run(final HttpRequest request, final HttpResponse response) {}
 
-    public void updateResponse(HttpResponse response) {
+    public void updateResponse(final HttpResponse response) {
         // remove all headers starting with "x-"
         for (String header : response.getHeaderNames())
             if (header.toUpperCase().startsWith("X-"))
