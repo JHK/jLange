@@ -74,7 +74,7 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
     protected HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel) {
         return new HttpResponseListener() {
             @Override
-            public synchronized void responseReceived(final HttpResponse response) {
+            public void responseReceived(final HttpResponse response) {
                 log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
 
                 synchronized (responseQueue) {
@@ -123,12 +123,12 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
 
             private void removeAndSendNext() {
                 synchronized (responseQueue) {
-                    synchronized (isSending) {
-                        if (!responseQueue.isEmpty())
-                            sendResponse();
-                        else
+                    if (!responseQueue.isEmpty())
+                        sendResponse();
+                    else
+                        synchronized (isSending) {
                             isSending = false;
-                    }
+                        }
                 }
             }
         };
