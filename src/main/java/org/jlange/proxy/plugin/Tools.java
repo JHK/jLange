@@ -76,7 +76,7 @@ public class Tools {
     public static final Charset getCharset(final HttpResponse response) {
         Charset encoding = null;
 
-        String contentType = HttpHeaders.getHeader(response, "content-type");
+        String contentType = HttpHeaders.getHeader(response, "content-type", "");
 
         if (contentType.contains("charset")) {
             try {
