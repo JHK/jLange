@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.outbound;
 
+import java.net.MalformedURLException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,14 +34,14 @@ public class UserAgent {
         this.timeout = timeout;
     }
 
-    public void request(final HttpRequest request, final HttpResponseListener responseListener) {
+    public void request(final HttpRequest request, final HttpResponseListener responseListener) throws MalformedURLException {
         List<HttpResponseListener> responseListenerList = new LinkedList<HttpResponseListener>();
         responseListenerList.add(responseListener);
         request(request, responseListenerList);
     }
 
-    public void request(final HttpRequest request, final List<HttpResponseListener> responseListenerList) {
         final RemoteAddress address = RemoteAddress.parseRequest(request);
+    public void request(final HttpRequest request, final List<HttpResponseListener> responseListenerList) throws MalformedURLException {
 
         ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleChannelFuture(address);
         if (outboundFuture == null)

@@ -80,7 +80,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
     }
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
 

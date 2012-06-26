@@ -45,7 +45,7 @@ public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
     private final Map<HttpRequest, HttpResponse> responseMap     = new HashMap<HttpRequest, HttpResponse>();
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
         synchronized (requestPipeline) {

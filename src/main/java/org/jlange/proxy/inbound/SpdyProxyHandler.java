@@ -39,7 +39,7 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
     private volatile Boolean          isSending     = false;
 
     @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
+    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
         // just for logging
