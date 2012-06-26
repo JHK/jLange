@@ -49,10 +49,6 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
     }
 
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {
-        // update request headers before sending
-        request.setProtocolVersion(HttpVersion.HTTP_1_1);
-        HttpHeaders.setKeepAlive(request, true);
-
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
