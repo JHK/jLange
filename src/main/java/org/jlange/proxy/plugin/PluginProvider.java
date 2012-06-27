@@ -34,8 +34,8 @@ public class PluginProvider {
     private PluginProvider() {
         plugins = new ArrayList<ResponsePlugin>();
 
-        plugins.add(new Compressor());
         plugins.add(new ResponseHeaderOptimizer());
+        plugins.add(new Compressor());
     }
 
     public List<ResponsePlugin> getResponsePlugins() {
