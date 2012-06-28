@@ -35,7 +35,7 @@ public class Tools {
      * @return true if the responses content is html
      */
     public static final Boolean isHtml(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, "content-type");
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
         return contentType != null && contentType.contains("text/html");
     }
 
@@ -46,7 +46,7 @@ public class Tools {
      * @return true if the responses content is javascript
      */
     public static final Boolean isJavascript(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, "content-type");
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
 
         Boolean result = false;
         if (contentType != null)
@@ -63,7 +63,7 @@ public class Tools {
      * @return true if the responses content is CSS
      */
     public static final Boolean isCSS(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, "content-type");
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
         return contentType != null && contentType.contains("text/css");
     }
 
@@ -76,7 +76,7 @@ public class Tools {
     public static final Charset getCharset(final HttpResponse response) {
         Charset encoding = null;
 
-        String contentType = HttpHeaders.getHeader(response, "content-type", "");
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE, "");
 
         if (contentType.contains("charset")) {
             try {
