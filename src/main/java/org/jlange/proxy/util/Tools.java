@@ -28,70 +28,7 @@ import org.slf4j.LoggerFactory;
 
 public class Tools {
 
-    private static final String[] javascriptContentTypes = new String[] { "application/x-javascript", "text/javascript",
-            "application/javascript"                    };
-    private static final Logger   log                    = LoggerFactory.getLogger(Tools.class);
-
-    /**
-     * Check response headers content type for being a html document
-     * 
-     * @param response {@link HttpResponse}
-     * @return true if the responses content is html
-     */
-    public static final Boolean isHtml(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.contains("text/html");
-    }
-
-    /**
-     * Check response headers content type for being a javascript document
-     * 
-     * @param response {@link HttpResponse}
-     * @return true if the responses content is javascript
-     */
-    public static final Boolean isJavascript(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-
-        Boolean result = false;
-        if (contentType != null)
-            for (String s : javascriptContentTypes)
-                result = result || contentType.contains(s);
-
-        return result;
-    }
-
-    /**
-     * Check response headers content type for being a CSS document
-     * 
-     * @param response {@link HttpResponse}
-     * @return true if the responses content is CSS
-     */
-    public static final Boolean isCSS(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.contains("text/css");
-    }
-
-    /**
-     * Check response headers content type for being a jpg image
-     * 
-     * @param response {@link HttpResponse}
-     * @return true if the responses content is a jpg image
-     */
-    public static final Boolean isJPG(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.equals("image/jpeg");
-    }
-
-    /**
-     * Check response headers content type for being a png image
-     * 
-     * @param response {@link HttpResponse}
-     * @return true if the responses content is a png image
-     */
-    public static final Boolean isPNG(final HttpResponse response) {
-        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.equals("image/png");
-    }
+    private static final Logger log = LoggerFactory.getLogger(Tools.class);
 
     /**
      * Reads the content of the {@link HttpResponse} and tries to determine the correct encoding

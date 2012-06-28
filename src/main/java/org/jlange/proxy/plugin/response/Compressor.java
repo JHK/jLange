@@ -22,6 +22,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jlange.proxy.plugin.ResponsePlugin;
+import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.Tools;
 import org.mozilla.javascript.EvaluatorException;
 import org.slf4j.Logger;
@@ -56,7 +57,7 @@ public class Compressor implements ResponsePlugin {
     @Override
     public Boolean isApplicable(final HttpResponse response) {
         return response.getStatus().equals(HttpResponseStatus.OK)
-                && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
+                && (HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response));
     }
 
     @Override
