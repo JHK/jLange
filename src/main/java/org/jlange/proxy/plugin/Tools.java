@@ -72,6 +72,28 @@ public class Tools {
     }
 
     /**
+     * Check response headers content type for being a jpg image
+     * 
+     * @param response {@link HttpResponse}
+     * @return true if the responses content is a jpg image
+     */
+    public static final Boolean isJPG(final HttpResponse response) {
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
+        return contentType != null && contentType.equals("image/jpeg");
+    }
+
+    /**
+     * Check response headers content type for being a png image
+     * 
+     * @param response {@link HttpResponse}
+     * @return true if the responses content is a png image
+     */
+    public static final Boolean isPNG(final HttpResponse response) {
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
+        return contentType != null && contentType.equals("image/png");
+    }
+
+    /**
      * Reads the content of the {@link HttpResponse} and tries to determine the correct encoding
      * 
      * @param response {@link HttpResponse}
