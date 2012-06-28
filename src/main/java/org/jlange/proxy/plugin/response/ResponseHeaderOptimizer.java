@@ -22,17 +22,18 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
 
     private final String[] removeableHeaders = new String[] { "P3P", "Server", "Via", "Generator" };
 
+    @Override
     public Boolean isApplicable(final HttpRequest request) {
         return true;
     }
 
+    @Override
     public Boolean isApplicable(final HttpResponse response) {
         return response != null && !response.getHeaders().isEmpty();
     }
 
-    public void run(final HttpRequest request, final HttpResponse response) {}
-
-    public void updateResponse(final HttpResponse response) {
+    @Override
+    public void run(final HttpRequest request, final HttpResponse response) {
         // remove all headers starting with "x-"
         for (String header : response.getHeaderNames())
             if (header.toUpperCase().startsWith("X-"))

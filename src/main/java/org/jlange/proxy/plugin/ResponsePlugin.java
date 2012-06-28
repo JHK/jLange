@@ -35,18 +35,11 @@ public interface ResponsePlugin {
     public Boolean isApplicable(final HttpResponse response);
 
     /**
-     * Run the main code of the plugin. This is intended to run in parallel and the response may not be changed.
+     * Run the main code of the plugin. The response will be updated in here. For read and changing responses content the code must be
+     * marked as <code>synchronized</code>, because these plugins are intended to run in parallel.
      * 
      * @param request {@link HttpRequest}
      * @param response matching {@link HttpResponse}
      */
     public void run(final HttpRequest request, final HttpResponse response);
-
-    /**
-     * Update the response regarding the plugins intention.
-     * 
-     * @param response {@link HttpResponse} to update
-     */
-    public void updateResponse(final HttpResponse response);
-
 }

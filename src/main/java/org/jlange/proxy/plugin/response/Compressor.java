@@ -33,8 +33,6 @@ public class Compressor implements ResponsePlugin {
 
     private final Logger         log = LoggerFactory.getLogger(Compressor.class);
     private final HtmlCompressor compressor;
-    private String               content;
-    private Charset              encoding;
 
     public Compressor() {
         compressor = new HtmlCompressor();
@@ -50,21 +48,27 @@ public class Compressor implements ResponsePlugin {
             compressor.setGenerateStatistics(true);
     }
 
+    @Override
     public Boolean isApplicable(final HttpRequest request) {
         return true;
     }
 
+    @Override
     public Boolean isApplicable(final HttpResponse response) {
         return response.getStatus().equals(HttpResponseStatus.OK)
                 && (Tools.isHtml(response) || Tools.isJavascript(response) || Tools.isCSS(response));
     }
 
+    @Override
     public void run(final HttpRequest request, final HttpResponse response) {
-        encoding = Tools.getCharset(response);
-        content = response.getContent().toString(encoding);
+        final Charset encoding = Tools.getCharset(response);
 
         try {
-            content = compressor.compress(content);
+            final String content = compressor.compress(response.getContent().toString(encoding));
+
+            ChannelBuffer buffer = ChannelBuffers.copiedBuffer(content, encoding);
+            HttpHeaders.setContentLength(response, buffer.readableBytes());
+            response.setContent(buffer);
         } catch (EvaluatorException e) {
             log.error(e.getMessage());
         }
@@ -76,15 +80,5 @@ public class Compressor implements ResponsePlugin {
             log.debug(compressor.getStatistics().toString());
             log.debug("saved " + (savedBytes < 1024 ? savedBytes + " Bytes" : savedBytes / 1024 + " KiB"));
         }
-    }
-
-    public void updateResponse(HttpResponse response) {
-        // check if the plugin ran successfully
-        if (content == null)
-            return;
-
-        ChannelBuffer buffer = ChannelBuffers.copiedBuffer(content, encoding);
-        HttpHeaders.setContentLength(response, buffer.readableBytes());
-        response.setContent(buffer);
     }
 }

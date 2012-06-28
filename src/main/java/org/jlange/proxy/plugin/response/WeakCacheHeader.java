@@ -102,9 +102,6 @@ public class WeakCacheHeader implements ResponsePlugin {
         }
     }
 
-    @Override
-    public void updateResponse(final HttpResponse response) {}
-
     private static String getUri(final HttpRequest request) {
         return request.getHeader(HttpHeaders.Names.HOST) + request.getUri();
     }
