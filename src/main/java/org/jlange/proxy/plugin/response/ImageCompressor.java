@@ -27,7 +27,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jlange.proxy.plugin.ResponsePlugin;
-import org.jlange.proxy.plugin.Tools;
+import org.jlange.proxy.util.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
