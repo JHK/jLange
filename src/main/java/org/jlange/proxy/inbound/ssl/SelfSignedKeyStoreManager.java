@@ -20,7 +20,7 @@ import java.io.InputStream;
 
 import javax.net.ssl.TrustManager;
 
-import org.jlange.proxy.Config;
+import org.jlange.proxy.util.Config;
 
 /**
  * KeyStore manager that automatically generates a self-signed certificate on startup if it doesn't already exit.

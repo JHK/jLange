@@ -11,12 +11,11 @@
  * 
  * You should have received a copy of the GNU General Public License along with Fruchtzwerg. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.jlange.proxy;
+package org.jlange.proxy.util;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.jlange.proxy.util.Tools;
 
 public class Config {
 
