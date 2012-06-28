@@ -61,7 +61,7 @@ public class ImageCompressor implements ResponsePlugin {
         try {
 
             int before, after;
-            LOG.debug("{}", type.getFile().getName());
+            LOG.debug("Using tmpfile {}", type.getFile().getAbsolutePath());
 
             { // write file to disk
                 InputStream in = new ChannelBufferInputStream(response.getContent());
