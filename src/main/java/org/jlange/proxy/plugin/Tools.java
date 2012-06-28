@@ -13,9 +13,13 @@
  */
 package org.jlange.proxy.plugin;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
+import java.util.Arrays;
 
+import org.apache.commons.io.IOUtils;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.util.CharsetUtil;
@@ -102,5 +106,26 @@ public class Tools {
         }
 
         return encoding;
+    }
+
+    /**
+     * Run a command line call
+     * 
+     * @param commands Array of command parameters
+     * @return command output
+     */
+    public static String nativeCall(final String... commands) {
+        log.debug("Running '{}'", Arrays.asList(commands));
+        final ProcessBuilder pb = new ProcessBuilder(commands);
+        try {
+            final Process process = pb.start();
+            final InputStream is = process.getInputStream();
+            final String data = IOUtils.toString(is);
+            log.debug("Completed native call: '{}'\nResponse: '" + data + "'", Arrays.asList(commands));
+            return data;
+        } catch (final IOException e) {
+            log.error("Error running commands: " + Arrays.asList(commands), e);
+            return "";
+        }
     }
 }
