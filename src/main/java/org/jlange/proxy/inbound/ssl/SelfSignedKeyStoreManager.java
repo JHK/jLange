@@ -20,13 +20,15 @@ import java.io.InputStream;
 
 import javax.net.ssl.TrustManager;
 
+import org.jlange.proxy.Config;
+
 /**
  * KeyStore manager that automatically generates a self-signed certificate on startup if it doesn't already exit.
  */
 public class SelfSignedKeyStoreManager implements KeyStoreManager {
 
-    private final File          KEYSTORE_FILE = new File("jlange_keystore.jks");
-    private static final String PASS          = "changeme";
+    private final File          KEYSTORE_FILE = new File(Config.getKeyStore());
+    private static final String PASS          = Config.getKeyPass();
 
     public SelfSignedKeyStoreManager() {}
 

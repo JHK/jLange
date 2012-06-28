@@ -26,6 +26,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jlange.proxy.Config;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.Tools;
 import org.slf4j.Logger;
@@ -33,12 +34,7 @@ import org.slf4j.LoggerFactory;
 
 public class ImageCompressor implements ResponsePlugin {
 
-    private static final Logger LOG  = LoggerFactory.getLogger(ImageCompressor.class);
-    private static final String PATH = "/tmp/jLange/";
-
-    public ImageCompressor() {
-        Tools.nativeCall("mkdir", "-p", PATH);
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(ImageCompressor.class);
 
     @Override
     public Boolean isApplicable(HttpRequest request) {
@@ -59,7 +55,7 @@ public class ImageCompressor implements ResponsePlugin {
     @Override
     public void run(final HttpRequest request, final HttpResponse response) {
         String uniqueName = String.valueOf(Thread.currentThread().getId());
-        ImageType type = Tools.isJPG(response) ? new JPG(PATH, uniqueName) : Tools.isPNG(response) ? new PNG(PATH, uniqueName) : null;
+        ImageType type = Tools.isJPG(response) ? new JPG(uniqueName) : Tools.isPNG(response) ? new PNG(uniqueName) : null;
 
         try {
 
@@ -105,9 +101,9 @@ public class ImageCompressor implements ResponsePlugin {
         private final static String ENDING = ".jpg";
         private final File          file;
 
-        public JPG(final String path, final String name) {
+        public JPG(final String name) {
             StringBuilder sb = new StringBuilder();
-            sb.append(path).append(name).append(ENDING);
+            sb.append(Config.getTmpPath()).append(name).append(ENDING);
             file = new File(sb.toString());
         }
 
@@ -127,9 +123,9 @@ public class ImageCompressor implements ResponsePlugin {
         private final static String ENDING = ".png";
         private final File          file;
 
-        public PNG(final String path, final String name) {
+        public PNG(final String name) {
             StringBuilder sb = new StringBuilder();
-            sb.append(path).append(name).append(ENDING);
+            sb.append(Config.getTmpPath()).append(name).append(ENDING);
             file = new File(sb.toString());
         }
 
