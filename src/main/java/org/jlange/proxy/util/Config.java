@@ -48,4 +48,7 @@ public class Config {
         return getConfig().getString("jLange.ssl.key");
     }
 
+    public static Integer getMaxOutboundConnections() {
+        return getConfig().getInteger("jLange.outbound.max_connections", 1);
+    }
 }

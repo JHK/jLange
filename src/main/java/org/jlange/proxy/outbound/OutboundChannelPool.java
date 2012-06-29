@@ -25,6 +25,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,9 @@ public class OutboundChannelPool {
                        pool.channelIdPool.dump();
                    }
 
+                   Runnable next = pool.connectionQueue.poll();
+                   if (next != null)
+                       next.run();
                }
            };
     // @formatter:on
@@ -55,6 +59,8 @@ public class OutboundChannelPool {
                                                                                Executors.newCachedThreadPool());
 
     private final static OutboundChannelPool           instance        = new OutboundChannelPool();
+
+    private final static Integer                       MAX_CONNECTIONS = Config.getMaxOutboundConnections();
 
     public static OutboundChannelPool getInstance() {
         return instance;
@@ -72,6 +78,11 @@ public class OutboundChannelPool {
     private final ChannelIdPool               channelIdPool;
 
     /**
+     * keeps track of waiting requests
+     */
+    private final Queue<Runnable>             connectionQueue;
+
+    /**
      * holds the most recent future to a channel id
      */
     private final Map<Integer, ChannelFuture> channelFuture;
@@ -79,6 +90,44 @@ public class OutboundChannelPool {
     private OutboundChannelPool() {
         channelFuture = new HashMap<Integer, ChannelFuture>();
         channelIdPool = new ChannelIdPool();
+        connectionQueue = new LinkedList<Runnable>();
+    }
+
+    public interface ChannelPipelineFactoryBuilder {
+        public ChannelPipelineFactory getChannelPipelineFactory();
+    }
+
+    public void getChannelFuture(final RemoteAddress address, final ChannelPipelineFactoryBuilder channelPipelineFactoryBuilder,
+            final ChannelFutureListener channelFutureListener) {
+        if (channelIdPool.getUsedChannelCount().intValue() >= MAX_CONNECTIONS) {
+            log.debug("{} - max connections reached, inserting into queue", address);
+            connectionQueue.add(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        channelFutureListener.operationComplete(getChannelFuture(address, channelPipelineFactoryBuilder));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } else {
+            try {
+                channelFutureListener.operationComplete(getChannelFuture(address, channelPipelineFactoryBuilder));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public ChannelFuture getChannelFuture(final RemoteAddress address, final ChannelPipelineFactoryBuilder channelPipelineFactoryBuilder) {
+        ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleChannelFuture(address);
+
+        if (outboundFuture == null)
+            outboundFuture = OutboundChannelPool.getInstance().getNewChannelFuture(address,
+                    channelPipelineFactoryBuilder.getChannelPipelineFactory());
+
+        return outboundFuture;
     }
 
     public ChannelFuture getNewChannelFuture(final RemoteAddress address, final ChannelPipelineFactory channelPipelineFactory) {
@@ -107,6 +156,10 @@ public class OutboundChannelPool {
                     channelFuture.remove(channelId);
                     channelIdPool.dump();
                 }
+
+                Runnable next = connectionQueue.poll();
+                if (next != null)
+                    next.run();
             }
         });
 
@@ -116,6 +169,7 @@ public class OutboundChannelPool {
     public ChannelFuture getIdleChannelFuture(final RemoteAddress address) {
         final Integer channelId;
         final ChannelFuture future;
+
         synchronized (channelIdPool) {
             // check if there is an idle channel
             channelId = channelIdPool.getIdleChannelId(address);
@@ -173,6 +227,15 @@ public class OutboundChannelPool {
                 if (isChannelIdle.get(channelId))
                     return channelId;
             return null;
+        }
+
+        public synchronized Integer getUsedChannelCount() {
+            Integer usedChannelIds = 0;
+            for (Queue<Integer> q : channels.values())
+                for (Integer channelId : q)
+                    if (!isChannelIdle.get(channelId))
+                        usedChannelIds += 1;
+            return usedChannelIds;
         }
 
         private synchronized Queue<Integer> getChannelIds(RemoteAddress address) {

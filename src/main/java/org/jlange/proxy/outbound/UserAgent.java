@@ -19,9 +19,12 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.outbound.OutboundChannelPool.ChannelPipelineFactoryBuilder;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.jlange.proxy.util.RemoteAddress;
@@ -63,16 +66,29 @@ public class UserAgent {
             updateRequest(request);
         }
 
-        ChannelFuture outboundFuture = OutboundChannelPool.getInstance().getIdleChannelFuture(address);
-        if (outboundFuture == null)
-            outboundFuture = OutboundChannelPool.getInstance().getNewChannelFuture(address, new HttpPipelineFactory(timeout));
+        // build channel pipeline if we need to create a new channel
+        final ChannelPipelineFactoryBuilder builder = new ChannelPipelineFactoryBuilder() {
+            @Override
+            public ChannelPipelineFactory getChannelPipelineFactory() {
+                return new HttpPipelineFactory(timeout);
+            }
+        };
 
-        // set actions when response arrives
-        final HttpResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpResponseHandler.class);
-        outboundHandler.setResponseListener(responseListenerList);
+        // things to do when we got a ChannelFuture finally
+        ChannelFutureListener listener = new ChannelFutureListener() {
+            @Override
+            public void operationComplete(final ChannelFuture future) {
+                // set actions when response arrives
+                final HttpResponseHandler outboundHandler = future.getChannel().getPipeline().get(HttpResponseHandler.class);
+                outboundHandler.setResponseListener(responseListenerList);
 
-        // perform request on outbound channel
-        outboundHandler.sendRequest(outboundFuture, request);
+                // perform request on outbound channel
+                outboundHandler.sendRequest(future, request);
+            }
+        };
+
+        // initiate
+        OutboundChannelPool.getInstance().getChannelFuture(address, builder, listener);
     }
 
     private void updateProxyRequest(final HttpRequest request) throws MalformedURLException {
