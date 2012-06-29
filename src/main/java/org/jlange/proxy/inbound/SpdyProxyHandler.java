@@ -43,8 +43,8 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
         // just for logging
-        log.debug("Channel {} - Stream {}", e.getChannel().getId(), getSpdyStreamId(request));
-        log.info("Stream {} - request received - {}", getSpdyStreamId(request), request.getUri());
+        log.info("Channel {} - Stream {} - request received - {}{}", new Object[] { e.getChannel().getId(), getSpdyStreamId(request),
+                HttpHeaders.getHost(request), request.getUri() });
         log.debug(request.toString());
 
         super.messageReceived(ctx, e);
@@ -75,7 +75,8 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
         return new HttpResponseListener() {
             @Override
             public void responseReceived(final HttpResponse response) {
-                log.debug("Stream {} - response received for request {}", getSpdyStreamId(response), request.getUri());
+                log.debug("Channel {} - Stream {} - response received for request {}", new Object[] { channel.getId(),
+                        getSpdyStreamId(response), request.getUri() });
 
                 synchronized (responseQueue) {
                     if (!responseQueue.contains(response))
@@ -96,18 +97,20 @@ public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
                     response = responseQueue.remove();
                 }
 
-                log.info("Stream {} - sending response - {}", getSpdyStreamId(response), response.getStatus());
+                log.info("Channel {} - Stream {} - sending response - {}", new Object[] { channel.getId(), getSpdyStreamId(response),
+                        response.getStatus() });
                 log.debug(response.toString());
 
                 if (!channel.isConnected()) {
                     // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                    log.info("Stream {} - try to send response to closed channel - skipped", getSpdyStreamId(response));
+                    log.info("Channel {} - Stream {} - try to send response to closed channel - skipped", channel.getId(),
+                            getSpdyStreamId(response));
                     removeAndSendNext();
                     return;
                 }
 
                 if (getSpdyStreamId(response) == -1) {
-                    log.info("duplicated response in queue - skipped");
+                    log.info("Channel {} - duplicated response in queue - skipped", channel.getId());
                     removeAndSendNext();
                     return;
                 }

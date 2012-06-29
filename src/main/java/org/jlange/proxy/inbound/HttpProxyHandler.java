@@ -92,7 +92,8 @@ public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
                         return;
                 }
 
-                log.info("Channel {} - sending response - {} for " + request.getUri(), channel.getId(), response.getStatus());
+                log.info("Channel {} - sending response - {} for {}{}",
+                        new Object[] { channel.getId(), response.getStatus(), HttpHeaders.getHost(request), request.getUri() });
                 log.debug(response.toString());
 
                 if (!channel.isConnected()) {
