@@ -16,7 +16,7 @@ package org.jlange.proxy.outbound;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -48,12 +48,12 @@ public class UserAgent {
     }
 
     public void request(final HttpRequest request, final HttpResponseListener responseListener) throws MalformedURLException {
-        List<HttpResponseListener> responseListenerList = new LinkedList<HttpResponseListener>();
+        Queue<HttpResponseListener> responseListenerList = new LinkedList<HttpResponseListener>();
         responseListenerList.add(responseListener);
         request(request, responseListenerList);
     }
 
-    public void request(final HttpRequest request, final List<HttpResponseListener> responseListenerList) throws MalformedURLException {
+    public void request(final HttpRequest request, final Queue<HttpResponseListener> responseListenerList) throws MalformedURLException {
         final RemoteAddress address;
         if (proxy != null) {
             address = proxy;
@@ -69,8 +69,7 @@ public class UserAgent {
 
         // set actions when response arrives
         final HttpResponseHandler outboundHandler = outboundFuture.getChannel().getPipeline().get(HttpResponseHandler.class);
-        for (HttpResponseListener responseListener : responseListenerList)
-            outboundHandler.addResponseListener(responseListener);
+        outboundHandler.setResponseListener(responseListenerList);
 
         // perform request on outbound channel
         outboundHandler.sendRequest(outboundFuture, request);

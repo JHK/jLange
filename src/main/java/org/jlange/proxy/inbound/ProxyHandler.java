@@ -16,7 +16,7 @@ package org.jlange.proxy.inbound;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.Queue;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
@@ -85,7 +85,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
 
         // response plugins and response listener
         // they need to be first one in place, because the response may depend on the original request (like special proxy headers)
-        final List<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
+        final Queue<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
         // TODO error response handling
         httpResponseListenerList.add(getPluginHttpResponseListener(request));
         httpResponseListenerList.add(getProtocolHttpResponseListener(request));
