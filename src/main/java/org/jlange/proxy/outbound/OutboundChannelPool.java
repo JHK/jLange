@@ -203,18 +203,20 @@ public class OutboundChannelPool {
                 return;
 
             StringBuilder sb = new StringBuilder();
-            for (RemoteAddress address : channels.keySet()) {
-                sb.append("\n");
-                sb.append(address.toString());
-                for (Integer i : channels.get(address)) {
-                    sb.append("\n\t - ");
-                    sb.append(i);
-                    sb.append(" -> ");
-                    if (isChannelIdle.get(i))
-                        sb.append("idle");
-                    else
-                        sb.append("used");
+            synchronized (channels) {
+                for (RemoteAddress address : channels.keySet()) {
+                    sb.append("\n");
+                    sb.append(address.toString());
+                    for (Integer i : channels.get(address)) {
+                        sb.append("\n\t - ");
+                        sb.append(i);
+                        sb.append(" -> ");
+                        if (isChannelIdle.get(i))
+                            sb.append("idle");
+                        else
+                            sb.append("used");
 
+                    }
                 }
             }
 
