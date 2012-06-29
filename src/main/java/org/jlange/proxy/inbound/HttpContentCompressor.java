@@ -21,17 +21,22 @@ public class HttpContentCompressor extends org.jboss.netty.handler.codec.http.Ht
     @Override
     public void writeRequested(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
 
-        if (!(e.getMessage() instanceof HttpResponse))
-            super.writeRequested(ctx, e);
+        final Object msg = e.getMessage();
 
-        final HttpResponse response = (HttpResponse) e.getMessage();
+        if (msg instanceof HttpResponse) {
 
-        // skip certain types
-        if (HttpHeaders2.isJPG(response) || HttpHeaders2.isPNG(response)) {
-            ctx.sendDownstream(e);
+            final HttpResponse response = (HttpResponse) msg;
+
+            // skip certain types
+            if (HttpHeaders2.isJPG(response) || HttpHeaders2.isPNG(response)) {
+                ctx.sendDownstream(e);
+            } else {
+                super.writeRequested(ctx, e);
+            }
+
         } else {
             super.writeRequested(ctx, e);
         }
-    }
 
+    }
 }
