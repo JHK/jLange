@@ -58,6 +58,7 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
             public void operationComplete(final ChannelFuture future) {
                 if (future.isSuccess()) {
                     log.info("Channel {} - sending request - {}", future.getChannel().getId(), request.getUri());
+                    log.debug("Channel {} - {}", future.getChannel().getId(), request);
                     future.getChannel().write(request);
                 } else {
                     log.info("Channel {} - could not send request - {}", future.getChannel().getId(), request.getUri());
