@@ -92,9 +92,11 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         log.info("Channel {} - response received - {}", e.getChannel().getId(), response.getStatus().toString());
         log.debug(response.toString());
 
+        final Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
+
         responseReceived(response);
 
-        if (HttpHeaders.isKeepAlive(response))
+        if (isKeepAlive)
             e.getFuture().addListener(OutboundChannelPool.IDLE);
         else
             e.getFuture().addListener(ChannelFutureListener.CLOSE);
