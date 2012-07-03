@@ -40,6 +40,7 @@ import org.jboss.netty.handler.ssl.SslHandler;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.IdleShutdownHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,12 +91,12 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
             if (SPDY_3.equals(protocol)) {
                 ChannelPipeline pipeline = ctx.getPipeline();
                 pipeline.addLast("decoder", new SpdyFrameDecoder(3));
-                pipeline.addLast("encoder", new SpdyFrameEncoder(3, 9, 15, 8));
+                pipeline.addLast("encoder", new SpdyFrameEncoder(3, Config.COMPRESSION_LEVEL, 15, 8));
                 pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
                 pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
-                pipeline.addLast("deflater", new HttpContentCompressor(9));
+                pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("handler", new SpdyProxyHandler());
 
                 // remove this handler, and process the requests as SPDY

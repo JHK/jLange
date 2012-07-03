@@ -37,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.OutboundChannelPool;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.IdleShutdownHandler;
 import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
@@ -86,7 +87,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
                 });
             } else {
                 pipeline.addLast("writer", new HttpResponseWriteDelayHandler());
-                pipeline.addLast("deflater", new HttpContentCompressor(9));
+                pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
                 pipeline.addLast("handler", new HttpProxyHandler());
 

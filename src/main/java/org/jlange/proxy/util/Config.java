@@ -26,6 +26,8 @@ public class Config {
 
     public static final Integer  MAX_CONNECTIONS   = getConfig().getInteger("jLange.outbound.max_connections", 1);
 
+    public static final Integer  COMPRESSION_LEVEL = getConfig().getInteger("jLange.proxy.compression_level", 5);
+
     private static Configuration config;
 
     private static Configuration getConfig() {
