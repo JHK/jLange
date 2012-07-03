@@ -30,13 +30,17 @@ public class HttpContentCompressor extends org.jboss.netty.handler.codec.http.Ht
 
             // skip certain types
             if (isCompressable(response)) {
-                super.writeRequested(ctx, e);
+                synchronized (this) {
+                    super.writeRequested(ctx, e);
+                }
             } else {
                 ctx.sendDownstream(e);
             }
 
         } else {
-            super.writeRequested(ctx, e);
+            synchronized (this) {
+                super.writeRequested(ctx, e);
+            }
         }
 
     }
