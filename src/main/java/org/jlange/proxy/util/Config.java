@@ -19,6 +19,13 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class Config {
 
+    public static final String   TMP_PATH          = getConfig().getString("jLange.tmp");
+
+    public static final String   KEY_STORE         = getConfig().getString("jLange.ssl.store");
+    public static final String   KEY_PASS          = getConfig().getString("jLange.ssl.key");
+
+    public static final Integer  MAX_CONNECTIONS   = getConfig().getInteger("jLange.outbound.max_connections", 1);
+
     private static Configuration config;
 
     private static Configuration getConfig() {
@@ -31,24 +38,8 @@ public class Config {
             }
 
             // initialization
-            Tools.nativeCall("mkdir", "-p", getTmpPath());
+            Tools.nativeCall("mkdir", "-p", config.getString("jLange.tmp"));
         }
         return config;
-    }
-
-    public static String getTmpPath() {
-        return getConfig().getString("jLange.tmp");
-    }
-
-    public static String getKeyStore() {
-        return getConfig().getString("jLange.ssl.store");
-    }
-
-    public static String getKeyPass() {
-        return getConfig().getString("jLange.ssl.key");
-    }
-
-    public static Integer getMaxOutboundConnections() {
-        return getConfig().getInteger("jLange.outbound.max_connections", 1);
     }
 }

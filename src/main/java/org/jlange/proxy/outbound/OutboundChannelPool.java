@@ -60,7 +60,7 @@ public class OutboundChannelPool {
 
     private final static OutboundChannelPool           instance        = new OutboundChannelPool();
 
-    private final static Integer                       MAX_CONNECTIONS = Config.getMaxOutboundConnections();
+    private final static Integer                       MAX_CONNECTIONS = Config.MAX_CONNECTIONS;
 
     public static OutboundChannelPool getInstance() {
         return instance;

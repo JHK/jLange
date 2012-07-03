@@ -27,8 +27,8 @@ import org.jlange.proxy.util.Config;
  */
 public class SelfSignedKeyStoreManager implements KeyStoreManager {
 
-    private final File          KEYSTORE_FILE = new File(Config.getKeyStore());
-    private static final String PASS          = Config.getKeyPass();
+    private final File          KEYSTORE_FILE = new File(Config.KEY_STORE);
+    private static final String PASS          = Config.KEY_PASS;
 
     public SelfSignedKeyStoreManager() {}
 
