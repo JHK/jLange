@@ -19,11 +19,10 @@ import java.util.Map;
 import java.util.Queue;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -35,21 +34,22 @@ import org.slf4j.LoggerFactory;
 
 public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
 
-    private final Logger                         log             = LoggerFactory.getLogger(getClass());
+    private final static Logger                    log                = LoggerFactory.getLogger(HttpProxyHandler.class);
 
     /**
      * If the channel is used for HTTP1.1 pipelines the order of sent responses must be the same than we got the requests. The Queue
      * requestPipeline stores the order of the requests and the Map responsePipeline stores the corresponding responses.
      */
-    private final Queue<HttpRequest>             requestPipeline = new LinkedList<HttpRequest>();
-    private final Map<HttpRequest, HttpResponse> responseMap     = new HashMap<HttpRequest, HttpResponse>();
+    private final Queue<HttpRequest>               requestQueue       = new LinkedList<HttpRequest>();
+    private final Map<HttpRequest, ResponseWriter> requestResponseMap = new HashMap<HttpRequest, ResponseWriter>();
+    private Boolean                                isWriting          = false;
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         final HttpRequest request = (HttpRequest) e.getMessage();
 
-        synchronized (requestPipeline) {
-            requestPipeline.add(request);
+        synchronized (requestQueue) {
+            requestQueue.add(request);
         }
 
         // just for logging
@@ -65,62 +65,35 @@ public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
         return new HttpResponseListener() {
 
             @Override
-            public synchronized void responseReceived(final HttpResponse response) {
+            public void responseReceived(final HttpResponse response) {
                 log.debug("Channel {} - response received for request {}", channel.getId(), request.getUri());
 
-                // we try to synchronize threads with responses. This allows more code to run in parallel
-                synchronized (responseMap) {
-                    responseMap.put(request, response);
-                }
+                ResponseWriter responseWriter = new ResponseWriter(request, channel, response);
+                requestResponseMap.put(request, responseWriter);
 
-                sendResponse(requestPipeline.peek());
-            }
-
-            private void sendResponse(final HttpRequest request) {
-                synchronized (requestPipeline) {
-                    // responses must be sent in the same order they were received
-                    if (request == null || !request.equals(requestPipeline.peek()))
-                        return;
-                }
-
-                final HttpResponse response;
-                synchronized (responseMap) {
-                    // response must be available to send it
-                    if (responseMap.containsKey(request))
-                        response = responseMap.remove(request);
-                    else
-                        return;
-                }
-
-                log.info("Channel {} - sending response - {} for {}{}",
-                        new Object[] { channel.getId(), response.getStatus(), HttpHeaders.getHost(request), request.getUri() });
-                log.debug(response.toString());
-
-                if (!channel.isConnected()) {
-                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                    log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
-                    synchronized (requestPipeline) {
-                        synchronized (responseMap) {
-                            responseMap.remove(requestPipeline.remove(request));
-                        }
+                // responses must be sent in the same order they were received
+                synchronized (requestQueue) {
+                    if (!isWriting && request.equals(requestQueue.peek())) {
+                        isWriting = true;
+                        responseWriter.write();
                     }
-                    sendResponse(requestPipeline.peek());
-                    return;
                 }
-
-                channel.write(response).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(final ChannelFuture future) {
-                        synchronized (requestPipeline) {
-                            // the response to this request was written completely
-                            requestPipeline.remove(request);
-                        }
-
-                        sendResponse(requestPipeline.peek());
-                    }
-                });
             }
         };
+    }
+
+    @Override
+    public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
+        synchronized (requestQueue) {
+            // cleanup finished request
+            requestResponseMap.remove(requestQueue.remove());
+
+            // responses must be sent in the same order they were received
+            if (requestResponseMap.containsKey(requestQueue.peek()))
+                requestResponseMap.get(requestQueue.peek()).write();
+            else
+                isWriting = false;
+        }
     }
 
     @Override

@@ -85,6 +85,7 @@ public class ProxyPipelineFactory implements ChannelPipelineFactory {
                     }
                 });
             } else {
+                pipeline.addLast("writer", new HttpResponseWriteDelayHandler());
                 pipeline.addLast("deflater", new HttpContentCompressor(9));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
                 pipeline.addLast("handler", new HttpProxyHandler());

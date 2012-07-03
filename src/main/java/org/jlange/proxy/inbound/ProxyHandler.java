@@ -15,13 +15,16 @@ package org.jlange.proxy.inbound;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
 import java.util.Queue;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -143,6 +146,45 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
             //TODO: check if header 'host' needs to get updated
         } catch (MalformedURLException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Class to write a response to a given channel including error handling.
+     */
+    protected final class ResponseWriter {
+
+        private final HttpRequest  request;
+        private final HttpResponse response;
+        private final Channel      channel;
+
+        public ResponseWriter(final HttpRequest request, final Channel channel, final HttpResponse response) {
+            if (channel == null)
+                throw new IllegalArgumentException("channel");
+            if (response == null)
+                throw new IllegalArgumentException("response");
+
+            this.response = response;
+            this.channel = channel;
+            this.request = request;
+        }
+
+        public ChannelFuture write() {
+            final ChannelFuture future;
+
+            String requestUri = request == null ? "" : request.getUri();
+            log.info("Channel {} - sending response - {} ({})", new Object[] { channel.getId(), response.getStatus(), requestUri });
+            log.debug(response.toString());
+
+            if (!channel.isConnected()) {
+                // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
+                log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
+                future = Channels.failedFuture(channel, new ClosedChannelException());
+            } else {
+                future = channel.write(response);
+            }
+
+            return future;
         }
     }
 }
