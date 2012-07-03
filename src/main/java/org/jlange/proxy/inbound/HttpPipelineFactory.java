@@ -42,7 +42,7 @@ import org.jlange.proxy.util.RemoteAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ProxyPipelineFactory implements ChannelPipelineFactory {
+public class HttpPipelineFactory implements ChannelPipelineFactory {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 

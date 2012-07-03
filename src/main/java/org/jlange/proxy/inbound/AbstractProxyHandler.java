@@ -38,7 +38,7 @@ import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
     private final Logger    log = LoggerFactory.getLogger(getClass());
     private final UserAgent ua  = new UserAgent();
@@ -90,7 +90,7 @@ public abstract class ProxyHandler extends SimpleChannelUpstreamHandler implemen
         // they need to be first one in place, because the response may depend on the original request (like special proxy headers)
         final Queue<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
         // TODO error response handling
-        httpResponseListenerList.add(getPluginHttpResponseListener(request));
+//        httpResponseListenerList.add(getPluginHttpResponseListener(request));
         httpResponseListenerList.add(getProtocolHttpResponseListener(request));
         httpResponseListenerList.add(getWriteHttpResponseListener(request, inboundChannel));
 

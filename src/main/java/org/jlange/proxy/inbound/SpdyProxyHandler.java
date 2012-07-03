@@ -32,7 +32,7 @@ import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SpdyProxyHandler extends ProxyHandler implements ChannelHandler {
+public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHandler {
 
     private final Logger              log           = LoggerFactory.getLogger(getClass());
     private final Queue<HttpResponse> responseQueue = new LinkedList<HttpResponse>();

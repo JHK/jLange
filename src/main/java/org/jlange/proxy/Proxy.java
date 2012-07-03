@@ -28,7 +28,7 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.ServerSocketChannel;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jlange.proxy.inbound.ProxyPipelineFactory;
+import org.jlange.proxy.inbound.HttpPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.util.IdleShutdownHandler;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class Proxy {
 
     public void start() {
         final ServerBootstrap inbound = new ServerBootstrap(inboundFactory);
-        inbound.setPipelineFactory(new ProxyPipelineFactory());
+        inbound.setPipelineFactory(new HttpPipelineFactory());
         inbound.setOption("child.tcpNoDelay", true);
         inbound.setOption("child.keepAlive", true);
 

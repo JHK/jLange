@@ -32,7 +32,7 @@ import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HttpProxyHandler extends ProxyHandler implements ChannelHandler {
+public class HttpProxyHandler extends AbstractProxyHandler implements ChannelHandler {
 
     private final static Logger                    log                = LoggerFactory.getLogger(HttpProxyHandler.class);
 
