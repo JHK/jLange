@@ -99,7 +99,8 @@ public class HttpProxyHandler extends AbstractProxyHandler implements ChannelHan
     @Override
     protected HttpResponseListener getProtocolHttpResponseListener(final HttpRequest request) {
 
-        final Boolean proxyKeepAlive = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION).equals(HttpHeaders.Values.KEEP_ALIVE);
+        final Boolean proxyKeepAlive = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION, HttpHeaders.Values.CLOSE)
+                .toLowerCase().equals(HttpHeaders.Values.KEEP_ALIVE);
 
         return new HttpResponseListener() {
             @Override
