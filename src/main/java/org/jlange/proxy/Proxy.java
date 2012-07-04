@@ -15,15 +15,11 @@ package org.jlange.proxy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jlange.proxy.inbound.HttpPipelineFactory;
+import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.IdleShutdownHandler;
@@ -31,21 +27,26 @@ import org.jlange.proxy.util.ServerSocketChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Proxy {
+public abstract class Proxy {
 
     public static void main(String[] args) throws IOException {
-        Proxy proxy = new Proxy(Config.HTTP_PORT);
-        Spdy spdy = new Spdy(Config.SPDY_PORT);
-        proxy.start();
+
+        Proxy http = new Http(Config.HTTP_PORT);
+        Proxy spdy = new Spdy(Config.SPDY_PORT);
+
+        http.start();
         spdy.start();
+
         System.in.read();
-        proxy.stop();
+
+        http.stop();
         spdy.stop();
+
     }
 
-    private final ServerSocketChannelFactory inboundFactory;
-    private final Logger                     log = LoggerFactory.getLogger(getClass());
+    protected final Logger                   log = LoggerFactory.getLogger(getClass());
 
+    private final ServerSocketChannelFactory inboundFactory;
     private final int                        port;
 
     public Proxy(final int port) {
@@ -55,7 +56,7 @@ public class Proxy {
 
     public void start() {
         final ServerBootstrap inbound = new ServerBootstrap(inboundFactory);
-        inbound.setPipelineFactory(new HttpPipelineFactory());
+        inbound.setPipelineFactory(getChannelPipelineFactory());
         inbound.setOption("child.tcpNoDelay", true);
         inbound.setOption("child.keepAlive", true);
 
@@ -78,4 +79,5 @@ public class Proxy {
         log.info("shutdown complete");
     }
 
+    protected abstract ChannelPipelineFactory getChannelPipelineFactory();
 }

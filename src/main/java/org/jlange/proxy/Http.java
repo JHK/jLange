@@ -14,16 +14,16 @@
 package org.jlange.proxy;
 
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jlange.proxy.inbound.SpdyPipelineFactory;
+import org.jlange.proxy.inbound.HttpPipelineFactory;
 
-public class Spdy extends Proxy {
+public class Http extends Proxy {
 
-    public Spdy(final int port) {
+    public Http(int port) {
         super(port);
     }
 
     @Override
     protected ChannelPipelineFactory getChannelPipelineFactory() {
-        return new SpdyPipelineFactory();
+        return new HttpPipelineFactory();
     }
 }
