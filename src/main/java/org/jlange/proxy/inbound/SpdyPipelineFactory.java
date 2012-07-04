@@ -96,6 +96,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
                 pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
+                pipeline.addLast("writer", new HttpResponseWriteDelayHandler());
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("handler", new SpdyProxyHandler());
 
@@ -106,6 +107,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 ChannelPipeline pipeline = ctx.getPipeline();
                 pipeline.addLast("decoder", new HttpRequestDecoder());
                 pipeline.addLast("encoder", new HttpResponseEncoder());
+                pipeline.addLast("writer", new HttpResponseWriteDelayHandler());
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
                 pipeline.addLast("handler", new HttpProxyHandler());
