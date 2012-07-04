@@ -90,7 +90,7 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
         // they need to be first one in place, because the response may depend on the original request (like special proxy headers)
         final Queue<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
         // TODO error response handling
-//        httpResponseListenerList.add(getPluginHttpResponseListener(request));
+        httpResponseListenerList.add(getPluginHttpResponseListener(request));
         httpResponseListenerList.add(getProtocolHttpResponseListener(request));
         httpResponseListenerList.add(getWriteHttpResponseListener(request, inboundChannel));
 
