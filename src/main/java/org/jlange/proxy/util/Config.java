@@ -13,20 +13,34 @@
  */
 package org.jlange.proxy.util;
 
+import java.io.File;
+import java.lang.management.ManagementFactory;
+
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class Config {
 
-    public static final String   TMP_PATH          = getConfig().getString("jLange.tmp");
+    public static final String  KEY_STORE         = getConfig().getString("jLange.ssl.store");
+    public static final String  KEY_PASS          = getConfig().getString("jLange.ssl.key");
 
-    public static final String   KEY_STORE         = getConfig().getString("jLange.ssl.store");
-    public static final String   KEY_PASS          = getConfig().getString("jLange.ssl.key");
+    public static final Integer MAX_CONNECTIONS   = getConfig().getInteger("jLange.outbound.max_connections", 1);
 
-    public static final Integer  MAX_CONNECTIONS   = getConfig().getInteger("jLange.outbound.max_connections", 1);
+    public static final File    TMP_DIRECTORY     = buildTmpDirectory();
+    public static final Integer COMPRESSION_LEVEL = getConfig().getInteger("jLange.proxy.compression_level", 5);
 
-    public static final Integer  COMPRESSION_LEVEL = getConfig().getInteger("jLange.proxy.compression_level", 5);
+    private static File buildTmpDirectory() {
+        File tmpBase = new File(getConfig().getString("jLange.proxy.tmp"));
+
+        if (!tmpBase.isDirectory())
+            throw new IllegalArgumentException("tmp is no directory");
+
+        File tmpDir = new File(tmpBase, "jLange-" + ManagementFactory.getRuntimeMXBean().getName());
+        tmpDir.mkdirs();
+
+        return tmpDir;
+    }
 
     private static Configuration config;
 
@@ -38,9 +52,6 @@ public class Config {
                 e.printStackTrace();
                 System.exit(1);
             }
-
-            // initialization
-            Tools.nativeCall("mkdir", "-p", config.getString("jLange.tmp"));
         }
         return config;
     }

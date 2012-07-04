@@ -103,9 +103,7 @@ public class ImageCompressor implements ResponsePlugin {
         private final File          file;
 
         public JPG(final String name) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(Config.TMP_PATH).append(name).append(ENDING);
-            file = new File(sb.toString());
+            file = new File(Config.TMP_DIRECTORY, name + ENDING);
         }
 
         @Override
@@ -125,9 +123,7 @@ public class ImageCompressor implements ResponsePlugin {
         private final File          file;
 
         public PNG(final String name) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(Config.TMP_PATH).append(name).append(ENDING);
-            file = new File(sb.toString());
+            file = new File(Config.TMP_DIRECTORY, name + ENDING);
         }
 
         @Override
