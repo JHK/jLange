@@ -31,9 +31,18 @@ import org.slf4j.LoggerFactory;
 public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
 
     private final static Logger log          = LoggerFactory.getLogger(HttpResponseWriteDelayHandler.class);
+    private final Integer       writeSpeed;
 
     private HttpResponse        response;
     private long                writtenBytes = 0L;
+
+    public HttpResponseWriteDelayHandler() {
+        this(100);
+    }
+
+    public HttpResponseWriteDelayHandler(final Integer writeSpeed) {
+        this.writeSpeed = writeSpeed;
+    }
 
     @Override
     public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
@@ -66,9 +75,11 @@ public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
             };
 
             // FIXME: this is bad, but it works!
-            try {
-                Thread.sleep(writtenBytes / 100);
-            } catch (InterruptedException e1) {}
+            if (writeSpeed.intValue() != 0) {
+                try {
+                    Thread.sleep(writtenBytes / writeSpeed.intValue());
+                } catch (InterruptedException e1) {}
+            }
 
             this.writtenBytes = 0L;
             this.response = null;
@@ -86,6 +97,7 @@ public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
 
         if (e.getMessage() instanceof HttpResponse) {
             response = (HttpResponse) e.getMessage();
+
             log.debug("Channel {} - write requested ({} bytes)", ctx.getChannel().getId(), response.getContent().readableBytes());
         }
 
