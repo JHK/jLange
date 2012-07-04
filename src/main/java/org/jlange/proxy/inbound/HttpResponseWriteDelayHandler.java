@@ -37,6 +37,10 @@ public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
 
     @Override
     public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
+        // No HttpResponse write event, nothing upstream from here should be interested in
+        if (response == null)
+            return;
+
         log.debug("Channel {} - wrote {} bytes", ctx.getChannel().getId(), e.getWrittenAmount());
 
         this.writtenBytes += e.getWrittenAmount();
@@ -80,10 +84,10 @@ public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
             writtenBytes = 0L;
         }
 
-        if (e.getMessage() instanceof HttpResponse)
+        if (e.getMessage() instanceof HttpResponse) {
             response = (HttpResponse) e.getMessage();
-
-        log.debug("Channel {} - write requested ({} bytes)", ctx.getChannel().getId(), response.getContent().readableBytes());
+            log.debug("Channel {} - write requested ({} bytes)", ctx.getChannel().getId(), response.getContent().readableBytes());
+        }
 
         ctx.sendDownstream(e);
     }
