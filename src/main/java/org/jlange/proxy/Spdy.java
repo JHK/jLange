@@ -15,11 +15,22 @@ package org.jlange.proxy;
 
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jlange.proxy.inbound.SpdyPipelineFactory;
+import org.jlange.proxy.util.Config;
 
 public class Spdy extends Proxy {
 
     public Spdy(final int port) {
         super(port);
+    }
+
+    @Override
+    public void start() {
+        if (Config.KEY_STORE == null)
+            throw new IllegalStateException("no keystore");
+        if (Config.KEY_PASS == null)
+            throw new IllegalStateException("no keypass");
+
+        super.start();
     }
 
     @Override
