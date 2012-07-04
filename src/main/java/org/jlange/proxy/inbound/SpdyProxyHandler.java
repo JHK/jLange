@@ -17,11 +17,10 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -34,9 +33,10 @@ import org.slf4j.LoggerFactory;
 
 public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHandler {
 
-    private final Logger              log           = LoggerFactory.getLogger(getClass());
-    private final Queue<HttpResponse> responseQueue = new LinkedList<HttpResponse>();
-    private volatile Boolean          isSending     = false;
+    private final static Logger         log           = LoggerFactory.getLogger(SpdyProxyHandler.class);
+
+    private final Queue<ResponseWriter> responseQueue = new LinkedList<ResponseWriter>();
+    private Boolean                     isWriting     = false;
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
@@ -78,63 +78,31 @@ public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHan
                 log.debug("Channel {} - Stream {} - response received for request {}", new Object[] { channel.getId(),
                         getSpdyStreamId(response), request.getUri() });
 
-                synchronized (responseQueue) {
-                    if (!responseQueue.contains(response))
-                        responseQueue.add(response);
-                }
+                ResponseWriter responseWriter = new ResponseWriter(request, channel, response);
 
-                synchronized (isSending) {
-                    if (!isSending) {
-                        isSending = true;
-                        sendResponse();
+                synchronized (responseQueue) {
+                    responseQueue.add(responseWriter);
+
+                    if (!isWriting) {
+                        isWriting = true;
+                        responseWriter.write();
                     }
-                }
-            }
-
-            private void sendResponse() {
-                final HttpResponse response;
-                synchronized (responseQueue) {
-                    response = responseQueue.remove();
-                }
-
-                log.info("Channel {} - Stream {} - sending response - {}", new Object[] { channel.getId(), getSpdyStreamId(response),
-                        response.getStatus() });
-                log.debug(response.toString());
-
-                if (!channel.isConnected()) {
-                    // this happens when the browser closes the channel before a response was written, e.g. stop loading the page
-                    log.info("Channel {} - Stream {} - try to send response to closed channel - skipped", channel.getId(),
-                            getSpdyStreamId(response));
-                    removeAndSendNext();
-                    return;
-                }
-
-                if (getSpdyStreamId(response) == -1) {
-                    log.info("Channel {} - duplicated response in queue - skipped", channel.getId());
-                    removeAndSendNext();
-                    return;
-                }
-
-                ChannelFuture future = channel.write(response);
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(final ChannelFuture future) {
-                        removeAndSendNext();
-                    }
-                });
-            }
-
-            private void removeAndSendNext() {
-                synchronized (responseQueue) {
-                    if (!responseQueue.isEmpty())
-                        sendResponse();
-                    else
-                        synchronized (isSending) {
-                            isSending = false;
-                        }
                 }
             }
         };
+    }
+
+    @Override
+    public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
+        synchronized (responseQueue) {
+            // cleanup finished request
+            responseQueue.remove();
+
+            if (!responseQueue.isEmpty())
+                responseQueue.peek().write();
+            else
+                isWriting = false;
+        }
     }
 
     private static Integer getSpdyStreamId(final HttpMessage message) {
