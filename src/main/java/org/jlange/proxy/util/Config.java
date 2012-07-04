@@ -40,6 +40,7 @@ public class Config {
 
         File tmpDir = new File(tmpBase, "jLange-" + ManagementFactory.getRuntimeMXBean().getName());
         tmpDir.mkdirs();
+        tmpDir.deleteOnExit();
 
         return tmpDir;
     }
