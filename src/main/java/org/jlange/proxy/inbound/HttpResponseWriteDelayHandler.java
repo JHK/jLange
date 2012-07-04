@@ -36,10 +36,6 @@ public class HttpResponseWriteDelayHandler extends SimpleChannelHandler {
     private HttpResponse        response;
     private long                writtenBytes = 0L;
 
-    public HttpResponseWriteDelayHandler() {
-        this(100);
-    }
-
     public HttpResponseWriteDelayHandler(final Integer writeSpeed) {
         this.writeSpeed = writeSpeed;
     }

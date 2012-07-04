@@ -86,7 +86,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
                     }
                 });
             } else {
-                pipeline.addLast("writer", new HttpResponseWriteDelayHandler());
+                pipeline.addLast("writer", new HttpResponseWriteDelayHandler(Config.HTTP_SPEEDUP));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
                 pipeline.addLast("handler", new HttpProxyHandler());

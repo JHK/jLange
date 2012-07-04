@@ -30,7 +30,9 @@ public class Config {
     public static final File    TMP_DIRECTORY     = buildTmpDirectory();
     public static final Integer COMPRESSION_LEVEL = getConfig().getInteger("jLange.proxy.compression_level", 5);
     public static final Integer HTTP_PORT         = getConfig().getInteger("jLange.proxy.http.port", 8080);
+    public static final Integer HTTP_SPEEDUP      = getConfig().getInteger("jLange.proxy.http.speedup", 120);
     public static final Integer SPDY_PORT         = getConfig().getInteger("jLange.proxy.spdy.port", 8443);
+    public static final Integer SPDY_SPEEDUP      = getConfig().getInteger("jLange.proxy.spdy.speedup", 0);
 
     private static File buildTmpDirectory() {
         File tmpBase = new File(getConfig().getString("jLange.proxy.tmp"));
