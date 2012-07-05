@@ -16,6 +16,7 @@ package org.jlange.proxy.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jlange.proxy.plugin.predefinedResponse.RequestPolicy;
 import org.jlange.proxy.plugin.response.HypertextCompressor;
 import org.jlange.proxy.plugin.response.ImageCompressor;
 import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
@@ -30,7 +31,8 @@ public class PluginProvider {
         return instance;
     }
 
-    private final List<ResponsePlugin> responePlugins;
+    private final List<ResponsePlugin>           responePlugins;
+    private final List<PredefinedResponsePlugin> predefinedResponsePlugins;
 
     private PluginProvider() {
         responePlugins = new ArrayList<ResponsePlugin>();
@@ -46,9 +48,18 @@ public class PluginProvider {
 
         if (Config.isPluginEnabled(ImageCompressor.class))
             responePlugins.add(new ImageCompressor());
+
+        predefinedResponsePlugins = new ArrayList<PredefinedResponsePlugin>();
+
+        if (Config.isPluginEnabled(RequestPolicy.class))
+            predefinedResponsePlugins.add(new RequestPolicy());
     }
 
     public List<ResponsePlugin> getResponsePlugins() {
         return responePlugins;
+    }
+
+    public List<PredefinedResponsePlugin> getPredefinedResponsePlugins() {
+        return predefinedResponsePlugins;
     }
 }

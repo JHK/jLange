@@ -32,6 +32,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.outbound.UserAgent;
 import org.jlange.proxy.plugin.PluginProvider;
+import org.jlange.proxy.plugin.PredefinedResponsePlugin;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
@@ -103,7 +104,13 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
         // TODO: implement
 
         // request to predefined response plugins
-        // TODO: implement
+        HttpResponse response;
+        for (PredefinedResponsePlugin plugin : PluginProvider.getInstance().getPredefinedResponsePlugins())
+            if ((response = plugin.getPredefinedResponse(request)) != null) {
+                for (HttpResponseListener listener : httpResponseListenerList)
+                    listener.responseReceived(response);
+                return;
+            }
 
         ua.request(request, httpResponseListenerList);
     }
