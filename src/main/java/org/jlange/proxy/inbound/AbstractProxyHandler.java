@@ -34,6 +34,7 @@ import org.jlange.proxy.outbound.UserAgent;
 import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.PredefinedResponsePlugin;
 import org.jlange.proxy.plugin.ResponsePlugin;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
@@ -41,8 +42,16 @@ import org.slf4j.LoggerFactory;
 
 public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
-    private final Logger    log = LoggerFactory.getLogger(getClass());
-    private final UserAgent ua  = new UserAgent();
+    private final Logger    log;
+    private final UserAgent ua;
+
+    public AbstractProxyHandler() {
+        log = LoggerFactory.getLogger(getClass());
+        ua = new UserAgent();
+
+        if (Config.PROXY_CHAIN != null)
+            ua.setProxy(Config.PROXY_CHAIN);
+    }
 
     /**
      * Builds a {@link HttpResponseListener} to update the responses headers depending on the current protocol status/information
