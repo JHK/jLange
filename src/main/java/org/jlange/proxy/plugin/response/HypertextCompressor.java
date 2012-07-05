@@ -50,12 +50,7 @@ public class HypertextCompressor implements ResponsePlugin {
     }
 
     @Override
-    public Boolean isApplicable(final HttpRequest request) {
-        return true;
-    }
-
-    @Override
-    public Boolean isApplicable(final HttpResponse response) {
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
         return response.getStatus().equals(HttpResponseStatus.OK)
                 && (HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response));
     }

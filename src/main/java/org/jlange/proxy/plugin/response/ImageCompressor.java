@@ -38,12 +38,7 @@ public class ImageCompressor implements ResponsePlugin {
     private static final Logger LOG = LoggerFactory.getLogger(ImageCompressor.class);
 
     @Override
-    public Boolean isApplicable(HttpRequest request) {
-        return true;
-    }
-
-    @Override
-    public Boolean isApplicable(final HttpResponse response) {
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;
 

@@ -32,16 +32,11 @@ public class WeakCacheHeader implements ResponsePlugin {
     }
 
     @Override
-    public Boolean isApplicable(final HttpRequest request) {
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
         // only GET requests are allowed to cache
         if (!request.getMethod().equals(HttpMethod.GET))
             return false;
 
-        return true;
-    }
-
-    @Override
-    public Boolean isApplicable(final HttpResponse response) {
         // cache only valid responses
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;

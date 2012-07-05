@@ -71,8 +71,8 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
             @Override
             public void responseReceived(final HttpResponse response) {
                 // apply response plugins
-                for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins(request)) {
-                    if (plugin.isApplicable(response)) {
+                for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins()) {
+                    if (plugin.isApplicable(request, response)) {
                         log.debug("Using plugin {} - {}", plugin.getClass().getName(), request.getUri());
                         plugin.run(request, response);
                     }

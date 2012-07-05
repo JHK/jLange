@@ -23,12 +23,7 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
     private final String[] removeableHeaders = new String[] { "P3P", "Server", "Via", "Generator" };
 
     @Override
-    public Boolean isApplicable(final HttpRequest request) {
-        return true;
-    }
-
-    @Override
-    public Boolean isApplicable(final HttpResponse response) {
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
         return response != null && !response.getHeaders().isEmpty();
     }
 

@@ -19,20 +19,13 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 public interface ResponsePlugin {
 
     /**
-     * Decides if the plugin is applicable for the given request
+     * Decides if the plugin is applicable for the given request and response
      * 
      * @param request {@link HttpRequest}
-     * @return is the plugin applicable
-     */
-    public Boolean isApplicable(final HttpRequest request);
-
-    /**
-     * Decides if the plugin is applicable for the given response
-     * 
      * @param response {@link HttpResponse}
      * @return is the plugin applicable
      */
-    public Boolean isApplicable(final HttpResponse response);
+    public Boolean isApplicable(final HttpRequest request, final HttpResponse response);
 
     /**
      * Run the main code of the plugin. The response will be updated in here. For read and changing responses content the code must be

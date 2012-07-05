@@ -14,10 +14,8 @@
 package org.jlange.proxy.plugin;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
-import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jlange.proxy.plugin.response.HypertextCompressor;
 import org.jlange.proxy.plugin.response.ImageCompressor;
 import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
@@ -52,15 +50,5 @@ public class PluginProvider {
 
     public List<ResponsePlugin> getResponsePlugins() {
         return responePlugins;
-    }
-
-    public List<ResponsePlugin> getResponsePlugins(final HttpRequest request) {
-        List<ResponsePlugin> plugins = new LinkedList<ResponsePlugin>();
-
-        for (ResponsePlugin plugin : this.responePlugins)
-            if (plugin.isApplicable(request))
-                plugins.add(plugin);
-
-        return plugins;
     }
 }
