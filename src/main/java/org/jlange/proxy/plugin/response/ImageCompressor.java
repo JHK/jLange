@@ -35,10 +35,14 @@ import org.slf4j.LoggerFactory;
 
 public class ImageCompressor implements ResponsePlugin {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ImageCompressor.class);
+    private static final Logger log       = LoggerFactory.getLogger(ImageCompressor.class);
+    private static Boolean      isEnabled = true;
 
     @Override
     public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
+        if (!isEnabled)
+            return false;
+
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;
 
@@ -56,7 +60,7 @@ public class ImageCompressor implements ResponsePlugin {
         try {
 
             int before, after;
-            LOG.debug("Using tmpfile {}", type.getFile().getAbsolutePath());
+            log.debug("Using tmpfile {}", type.getFile().getAbsolutePath());
 
             { // write file to disk
                 InputStream in = new ChannelBufferInputStream(response.getContent());
@@ -79,17 +83,18 @@ public class ImageCompressor implements ResponsePlugin {
                 after = b.length;
             }
 
-            LOG.info("saved {} bytes ({}%) - {}", new Object[] { before - after, 100 - ((float) after / before) * 100, request.getUri() });
+            log.info("saved {} bytes ({}%) - {}", new Object[] { before - after, 100 - ((float) after / before) * 100, request.getUri() });
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.warn("deactivate plugin: {}", e.getMessage());
+            isEnabled = false;
         }
     }
 
     private interface ImageType {
         public File getFile();
 
-        public void optimize();
+        public void optimize() throws IOException;
     }
 
     private static final class JPG implements ImageType {
@@ -107,7 +112,7 @@ public class ImageCompressor implements ResponsePlugin {
         }
 
         @Override
-        public void optimize() {
+        public void optimize() throws IOException {
             Tools.nativeCall("jpegoptim", "--strip-all", file.getAbsolutePath());
         }
     }
@@ -127,7 +132,7 @@ public class ImageCompressor implements ResponsePlugin {
         }
 
         @Override
-        public void optimize() {
+        public void optimize() throws IOException {
             Tools.nativeCall("optipng", file.getAbsolutePath());
         }
     }

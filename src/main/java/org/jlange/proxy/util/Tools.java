@@ -73,18 +73,13 @@ public class Tools {
      * @param commands Array of command parameters
      * @return command output
      */
-    public static String nativeCall(final String... commands) {
+    public static String nativeCall(final String... commands) throws IOException {
         log.debug("Running '{}'", Arrays.asList(commands));
         final ProcessBuilder pb = new ProcessBuilder(commands);
-        try {
-            final Process process = pb.start();
-            final InputStream is = process.getInputStream();
-            final String data = IOUtils.toString(is);
-            log.debug("Completed native call: '{}'\nResponse: '" + data + "'", Arrays.asList(commands));
-            return data;
-        } catch (final IOException e) {
-            log.error("Error running commands: " + Arrays.asList(commands), e);
-            return "";
-        }
+        final Process process = pb.start();
+        final InputStream is = process.getInputStream();
+        final String data = IOUtils.toString(is);
+        log.debug("Completed native call: '{}'\nResponse: '" + data + "'", Arrays.asList(commands));
+        return data;
     }
 }
