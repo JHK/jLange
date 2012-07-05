@@ -60,8 +60,6 @@ public class OutboundChannelPool {
 
     private final static OutboundChannelPool           instance        = new OutboundChannelPool();
 
-    private final static Integer                       MAX_CONNECTIONS = Config.MAX_CONNECTIONS;
-
     public static OutboundChannelPool getInstance() {
         return instance;
     }
@@ -99,7 +97,7 @@ public class OutboundChannelPool {
 
     public void getChannelFuture(final RemoteAddress address, final ChannelPipelineFactoryBuilder channelPipelineFactoryBuilder,
             final ChannelFutureListener channelFutureListener) {
-        if (channelIdPool.getUsedChannelCount().intValue() >= MAX_CONNECTIONS) {
+        if (channelIdPool.getUsedChannelCount().intValue() >= Config.MAX_USED_CONNECTIONS) {
             log.debug("{} - max connections reached, inserting into queue", address);
             connectionQueue.add(new Runnable() {
                 @Override

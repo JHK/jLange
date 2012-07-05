@@ -55,15 +55,19 @@ public abstract class Proxy {
     }
 
     public void start() {
-        final ServerBootstrap inbound = new ServerBootstrap(inboundFactory);
-        inbound.setPipelineFactory(getChannelPipelineFactory());
-        inbound.setOption("child.tcpNoDelay", true);
-        inbound.setOption("child.keepAlive", true);
+        if (isEnabled()) {
+            final ServerBootstrap inbound = new ServerBootstrap(inboundFactory);
+            inbound.setPipelineFactory(getChannelPipelineFactory());
+            inbound.setOption("child.tcpNoDelay", true);
+            inbound.setOption("child.keepAlive", true);
 
-        Channel channel = inbound.bind(new InetSocketAddress(port));
-        inboundFactory.addChannel(channel);
+            Channel channel = inbound.bind(new InetSocketAddress(port));
+            inboundFactory.addChannel(channel);
 
-        log.info("started on port {}", port);
+            log.info("started on port {}", port);
+        } else {
+            log.info("deactivated");
+        }
     }
 
     public void stop() {
@@ -80,4 +84,6 @@ public abstract class Proxy {
     }
 
     protected abstract ChannelPipelineFactory getChannelPipelineFactory();
+
+    protected abstract Boolean isEnabled();
 }

@@ -24,17 +24,24 @@ public class Spdy extends Proxy {
     }
 
     @Override
-    public void start() {
-        if (Config.KEY_STORE == null)
-            throw new IllegalStateException("no keystore");
-        if (Config.KEY_PASS == null)
-            throw new IllegalStateException("no keypass");
-
-        super.start();
+    protected ChannelPipelineFactory getChannelPipelineFactory() {
+        return new SpdyPipelineFactory();
     }
 
     @Override
-    protected ChannelPipelineFactory getChannelPipelineFactory() {
-        return new SpdyPipelineFactory();
+    protected Boolean isEnabled() {
+        if (!Config.SPDY_ENABLED)
+            return Config.SPDY_ENABLED;
+        
+        if (Config.SPDY_KEY_STORE == null) {
+            log.error("keystore missing");
+            return false;
+        }
+        if (Config.SPDY_KEY_PASS == null) {
+            log.error("keypass missing");
+            return false;
+        }
+
+        return true;
     }
 }

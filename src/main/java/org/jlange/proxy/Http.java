@@ -15,6 +15,7 @@ package org.jlange.proxy;
 
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jlange.proxy.inbound.HttpPipelineFactory;
+import org.jlange.proxy.util.Config;
 
 public class Http extends Proxy {
 
@@ -25,5 +26,10 @@ public class Http extends Proxy {
     @Override
     protected ChannelPipelineFactory getChannelPipelineFactory() {
         return new HttpPipelineFactory();
+    }
+
+    @Override
+    protected Boolean isEnabled() {
+        return Config.HTTP_ENABLED;
     }
 }
