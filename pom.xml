@@ -4,7 +4,7 @@
 
 	<groupId>org.jlange</groupId>
 	<artifactId>jLange</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<scm>
 		<connection>scm:git:ssh://git@88.198.164.179/~/repos/jLange.git</connection>
