@@ -22,6 +22,7 @@ import org.jlange.proxy.plugin.response.HypertextCompressor;
 import org.jlange.proxy.plugin.response.ImageCompressor;
 import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
 import org.jlange.proxy.plugin.response.WeakCacheHeader;
+import org.jlange.proxy.util.Config;
 
 public class PluginProvider {
 
@@ -36,9 +37,16 @@ public class PluginProvider {
     private PluginProvider() {
         responePlugins = new ArrayList<ResponsePlugin>();
 
+        if (Config.isPluginEnabled(ResponseHeaderOptimizer.class))
             responePlugins.add(new ResponseHeaderOptimizer());
+
+        if (Config.isPluginEnabled(WeakCacheHeader.class))
             responePlugins.add(new WeakCacheHeader());
+
+        if (Config.isPluginEnabled(HypertextCompressor.class))
             responePlugins.add(new HypertextCompressor());
+
+        if (Config.isPluginEnabled(ImageCompressor.class))
             responePlugins.add(new ImageCompressor());
     }
 
