@@ -58,7 +58,7 @@ public class WeakCacheHeader implements ResponsePlugin {
     }
 
     @Override
-    public synchronized void run(final HttpRequest request, final HttpResponse response) {
+    public void run(final HttpRequest request, final HttpResponse response) {
 
         String currentUri = getUri(request);
         Date clientsLastCache = getLastSeen(request);
