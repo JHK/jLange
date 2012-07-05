@@ -18,7 +18,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jlange.proxy.plugin.response.Compressor;
+import org.jlange.proxy.plugin.response.HypertextCompressor;
 import org.jlange.proxy.plugin.response.ImageCompressor;
 import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
 import org.jlange.proxy.plugin.response.WeakCacheHeader;
@@ -31,25 +31,25 @@ public class PluginProvider {
         return instance;
     }
 
-    private final List<ResponsePlugin> plugins;
+    private final List<ResponsePlugin> responePlugins;
 
     private PluginProvider() {
-        plugins = new ArrayList<ResponsePlugin>();
+        responePlugins = new ArrayList<ResponsePlugin>();
 
-        plugins.add(new ResponseHeaderOptimizer());
-        plugins.add(new WeakCacheHeader());
-        plugins.add(new Compressor());
-        plugins.add(new ImageCompressor());
+            responePlugins.add(new ResponseHeaderOptimizer());
+            responePlugins.add(new WeakCacheHeader());
+            responePlugins.add(new HypertextCompressor());
+            responePlugins.add(new ImageCompressor());
     }
 
     public List<ResponsePlugin> getResponsePlugins() {
-        return plugins;
+        return responePlugins;
     }
 
     public List<ResponsePlugin> getResponsePlugins(final HttpRequest request) {
         List<ResponsePlugin> plugins = new LinkedList<ResponsePlugin>();
 
-        for (ResponsePlugin plugin : this.plugins)
+        for (ResponsePlugin plugin : this.responePlugins)
             if (plugin.isApplicable(request))
                 plugins.add(plugin);
 

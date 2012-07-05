@@ -30,12 +30,12 @@ import org.slf4j.LoggerFactory;
 
 import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
 
-public class Compressor implements ResponsePlugin {
+public class HypertextCompressor implements ResponsePlugin {
 
-    private final Logger         log = LoggerFactory.getLogger(Compressor.class);
+    private final Logger         log = LoggerFactory.getLogger(HypertextCompressor.class);
     private final HtmlCompressor compressor;
 
-    public Compressor() {
+    public HypertextCompressor() {
         compressor = new HtmlCompressor();
         compressor.setCompressCss(true);
         compressor.setCompressJavaScript(true);
@@ -79,7 +79,7 @@ public class Compressor implements ResponsePlugin {
                     - compressor.getStatistics().getCompressedMetrics().getFilesize();
 
             log.debug(compressor.getStatistics().toString());
-            log.debug("saved " + (savedBytes < 1024 ? savedBytes + " Bytes" : savedBytes / 1024 + " KiB"));
+            log.info("saved " + (savedBytes < 1024 ? savedBytes + " Bytes" : savedBytes / 1024 + " KiB"));
         }
     }
 }
