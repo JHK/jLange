@@ -5,3 +5,4 @@ target/
 pki/
 log.txt
 *.jks
+*.properties
