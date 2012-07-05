@@ -22,6 +22,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 public class Config {
 
     public static final Integer MAX_USED_CONNECTIONS = getConfig().getInteger("org.jlange.outbound.max_used_connections", 12);
+    public static final Integer MAX_RESPONSE_SIZE    = getConfig().getInteger("org.jlange.outbound.max_response_size", 2 * 1024 * 1024);
 
     public static final File    TMP_DIRECTORY        = buildTmpDirectory();
     public static final Integer COMPRESSION_LEVEL    = getConfig().getInteger("org.jlange.proxy.compression_level", 7);
