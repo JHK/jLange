@@ -69,6 +69,8 @@ public class ImageCompressor implements ResponsePlugin {
                 in.read(b);
                 out.write(b);
                 before = b.length;
+                in.close();
+                out.close();
             }
 
             // optimize file
@@ -81,6 +83,7 @@ public class ImageCompressor implements ResponsePlugin {
                 response.setContent(ChannelBuffers.copiedBuffer(b));
                 HttpHeaders.setContentLength(response, b.length);
                 after = b.length;
+                in.close();
             }
 
             log.info("saved {} bytes ({}%) - {}", new Object[] { before - after, 100 - ((float) after / before) * 100, request.getUri() });
