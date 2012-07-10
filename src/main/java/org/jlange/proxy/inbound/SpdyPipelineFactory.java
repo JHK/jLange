@@ -30,10 +30,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.spdy.DefaultSpdySettingsFrame;
-import org.jboss.netty.handler.codec.spdy.SpdyFrameDecoder;
-import org.jboss.netty.handler.codec.spdy.SpdyFrameEncoder;
-import org.jboss.netty.handler.codec.spdy.SpdyHttpDecoder;
-import org.jboss.netty.handler.codec.spdy.SpdyHttpEncoder;
+import org.jboss.netty.handler.codec.spdy.SpdyFrameCodec;
+import org.jboss.netty.handler.codec.spdy.SpdyHttpCodec;
 import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
 import org.jboss.netty.handler.codec.spdy.SpdySettingsFrame;
 import org.jboss.netty.handler.ssl.SslHandler;
@@ -90,12 +88,10 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
             if (SPDY_3.equals(protocol)) {
                 ChannelPipeline pipeline = ctx.getPipeline();
-                pipeline.addLast("decoder", new SpdyFrameDecoder(3));
-                pipeline.addLast("encoder", new SpdyFrameEncoder(3, Config.COMPRESSION_LEVEL, 15, 8));
+                pipeline.addLast("spdy", new SpdyFrameCodec(3, 8192, 16384, Config.COMPRESSION_LEVEL, 15, 8));
                 pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
-                pipeline.addLast("spdy_http_encoder", new SpdyHttpEncoder(3));
-                pipeline.addLast("spdy_http_decoder", new SpdyHttpDecoder(3, 2 * 1024 * 1024));
+                pipeline.addLast("spdy_http", new SpdyHttpCodec(3, 2 * 1024 * 1024));
                 pipeline.addLast("writer", new HttpResponseWriteDelayHandler(Config.SPDY_SPEEDUP));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("handler", new SpdyProxyHandler());
