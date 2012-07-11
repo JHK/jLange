@@ -227,10 +227,8 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
             this.isResponseWritten = false;
 
             if (response.getContent().readableBytes() > Config.CHUNK_SIZE) {
-                int currentIndex = 0;
-                while (currentIndex + Config.CHUNK_SIZE < response.getContent().readableBytes()) {
+                while (Config.CHUNK_SIZE < response.getContent().readableBytes()) {
                     chunks.add(new DefaultHttpChunk(response.getContent().readSlice(Config.CHUNK_SIZE)));
-                    currentIndex += Config.CHUNK_SIZE;
                 }
                 chunks.add(new DefaultHttpChunk(response.getContent().readSlice(response.getContent().readableBytes())));
                 chunks.add(HttpChunk.LAST_CHUNK);
