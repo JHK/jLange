@@ -132,8 +132,8 @@ public class OutboundChannelPool {
         // setup client
         final ClientBootstrap outboundClient = new ClientBootstrap(outboundFactory);
         outboundClient.setPipelineFactory(channelPipelineFactory);
-        outboundClient.setOption("child.tcpNoDelay", true);
-        outboundClient.setOption("child.keepAlive", true);
+        outboundClient.setOption("tcpNoDelay", true);
+        outboundClient.setOption("keepAlive", true);
 
         // connect to remote host
         final ChannelFuture f = outboundClient.connect(new InetSocketAddress(address.getHost(), address.getPort()));
