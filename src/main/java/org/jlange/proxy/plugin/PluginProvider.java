@@ -31,23 +31,23 @@ public class PluginProvider {
         return instance;
     }
 
-    private final List<ResponsePlugin>           responePlugins;
+    private final List<ResponsePlugin>           responsePlugins;
     private final List<PredefinedResponsePlugin> predefinedResponsePlugins;
 
     private PluginProvider() {
-        responePlugins = new ArrayList<ResponsePlugin>();
+        responsePlugins = new ArrayList<ResponsePlugin>();
 
         if (Config.isPluginEnabled(ResponseHeaderOptimizer.class))
-            responePlugins.add(new ResponseHeaderOptimizer());
+            responsePlugins.add(new ResponseHeaderOptimizer());
 
         if (Config.isPluginEnabled(WeakCacheHeader.class))
-            responePlugins.add(new WeakCacheHeader());
+            responsePlugins.add(new WeakCacheHeader());
 
         if (Config.isPluginEnabled(HypertextCompressor.class))
-            responePlugins.add(new HypertextCompressor());
+            responsePlugins.add(new HypertextCompressor());
 
         if (Config.isPluginEnabled(ImageCompressor.class))
-            responePlugins.add(new ImageCompressor());
+            responsePlugins.add(new ImageCompressor());
 
         predefinedResponsePlugins = new ArrayList<PredefinedResponsePlugin>();
 
@@ -56,7 +56,7 @@ public class PluginProvider {
     }
 
     public List<ResponsePlugin> getResponsePlugins() {
-        return responePlugins;
+        return responsePlugins;
     }
 
     public List<PredefinedResponsePlugin> getPredefinedResponsePlugins() {
