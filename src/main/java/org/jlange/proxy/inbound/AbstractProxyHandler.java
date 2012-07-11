@@ -235,7 +235,7 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
 
                 response.setContent(ChannelBuffers.EMPTY_BUFFER);
                 response.setChunked(true);
-                response.setHeader(HttpHeaders.Names.CONTENT_TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
+                response.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
             }
         }
 
