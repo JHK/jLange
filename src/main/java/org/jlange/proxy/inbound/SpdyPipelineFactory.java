@@ -35,6 +35,7 @@ import org.jboss.netty.handler.codec.spdy.SpdyHttpCodec;
 import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
 import org.jboss.netty.handler.codec.spdy.SpdySettingsFrame;
 import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
@@ -92,9 +93,9 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("spdy_session_handler", new SpdySessionHandler(3, true));
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http", new SpdyHttpCodec(3, 2 * 1024 * 1024));
-                pipeline.addLast("writer", new HttpResponseWriteDelayHandler(Config.SPDY_SPEEDUP));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
-                pipeline.addLast("handler", new SpdyProxyHandler());
+                pipeline.addLast("chunkWriter", new ChunkedWriteHandler());
+                pipeline.addLast("proxy", new SpdyProxyHandler());
 
                 // remove this handler, and process the requests as SPDY
                 pipeline.remove(this);
@@ -103,10 +104,10 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 ChannelPipeline pipeline = ctx.getPipeline();
                 pipeline.addLast("decoder", new HttpRequestDecoder());
                 pipeline.addLast("encoder", new HttpResponseEncoder());
-                pipeline.addLast("writer", new HttpResponseWriteDelayHandler(Config.HTTP_SPEEDUP));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-                pipeline.addLast("handler", new HttpProxyHandler());
+                pipeline.addLast("chunkWriter", new ChunkedWriteHandler());
+                pipeline.addLast("proxy", new HttpProxyHandler());
 
                 // remove this handler, and process the requests as HTTP
                 pipeline.remove(this);

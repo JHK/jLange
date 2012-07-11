@@ -13,14 +13,10 @@
  */
 package org.jlange.proxy.inbound;
 
-import java.util.LinkedList;
-import java.util.Queue;
-
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -33,10 +29,7 @@ import org.slf4j.LoggerFactory;
 
 public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHandler {
 
-    private final static Logger         log           = LoggerFactory.getLogger(SpdyProxyHandler.class);
-
-    private final Queue<ResponseWriter> responseQueue = new LinkedList<ResponseWriter>();
-    private Boolean                     isWriting     = false;
+    private final static Logger log = LoggerFactory.getLogger(SpdyProxyHandler.class);
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
@@ -80,29 +73,11 @@ public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHan
 
                 ResponseWriter responseWriter = new ResponseWriter(request, channel, response);
 
-                synchronized (responseQueue) {
-                    responseQueue.add(responseWriter);
-
-                    if (!isWriting) {
-                        isWriting = true;
-                        responseWriter.write();
-                    }
+                synchronized (SpdyProxyHandler.this) {
+                    responseWriter.write();
                 }
             }
         };
-    }
-
-    @Override
-    public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
-        synchronized (responseQueue) {
-            // cleanup finished request
-            responseQueue.remove();
-
-            if (!responseQueue.isEmpty())
-                responseQueue.peek().write();
-            else
-                isWriting = false;
-        }
     }
 
     private static Integer getSpdyStreamId(final HttpMessage message) {

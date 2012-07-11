@@ -22,7 +22,6 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.WriteCompletionEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -42,7 +41,6 @@ public class HttpProxyHandler extends AbstractProxyHandler implements ChannelHan
      */
     private final Queue<HttpRequest>               requestQueue       = new LinkedList<HttpRequest>();
     private final Map<HttpRequest, ResponseWriter> requestResponseMap = new HashMap<HttpRequest, ResponseWriter>();
-    private Boolean                                isWriting          = false;
 
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
@@ -73,27 +71,12 @@ public class HttpProxyHandler extends AbstractProxyHandler implements ChannelHan
 
                 // responses must be sent in the same order they were received
                 synchronized (requestQueue) {
-                    if (!isWriting && request.equals(requestQueue.peek())) {
-                        isWriting = true;
-                        responseWriter.write();
+                    while (requestResponseMap.containsKey(requestQueue.peek())) {
+                        requestResponseMap.remove(requestQueue.remove()).write();
                     }
                 }
             }
         };
-    }
-
-    @Override
-    public void writeComplete(final ChannelHandlerContext ctx, final WriteCompletionEvent e) {
-        synchronized (requestQueue) {
-            // cleanup finished request
-            requestResponseMap.remove(requestQueue.remove());
-
-            // responses must be sent in the same order they were received
-            if (requestResponseMap.containsKey(requestQueue.peek()))
-                requestResponseMap.get(requestQueue.peek()).write();
-            else
-                isWriting = false;
-        }
     }
 
     @Override
