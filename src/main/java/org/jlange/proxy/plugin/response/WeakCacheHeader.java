@@ -98,7 +98,10 @@ public class WeakCacheHeader implements ResponsePlugin {
     }
 
     private static String getUri(final HttpRequest request) {
-        return request.getHeader(HttpHeaders.Names.HOST) + request.getUri();
+        if (request.getUri().toLowerCase().startsWith("http"))
+            return request.getUri();
+        else
+            return request.getHeader(HttpHeaders.Names.HOST) + request.getUri();
     }
 
     private static Integer getHash(final HttpResponse response) {
