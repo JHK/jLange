@@ -15,7 +15,6 @@ package org.jlange.proxy.outbound;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.LinkedList;
 import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
@@ -39,12 +38,6 @@ public class UserAgent {
 
     public void setProxy(final RemoteAddress proxy) {
         this.proxy = proxy;
-    }
-
-    public void request(final HttpRequest request, final HttpResponseListener responseListener) throws MalformedURLException {
-        Queue<HttpResponseListener> responseListenerList = new LinkedList<HttpResponseListener>();
-        responseListenerList.add(responseListener);
-        request(request, responseListenerList);
     }
 
     public void request(final HttpRequest request, final Queue<HttpResponseListener> responseListenerList) throws MalformedURLException {
