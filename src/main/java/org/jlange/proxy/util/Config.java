@@ -21,6 +21,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 
 public class Config {
 
+    public static final Integer       OUTBOUND_TIMEOUT     = getConfig().getInteger("org.jlange.outbound.connection_timeout", 30);
     public static final Integer       MAX_USED_CONNECTIONS = getConfig().getInteger("org.jlange.outbound.max_used_connections", 12);
     public static final Integer       MAX_RESPONSE_SIZE    = getConfig().getInteger("org.jlange.outbound.max_response_size", 2097152);
     public static final RemoteAddress PROXY_CHAIN          = buildProxyChain();

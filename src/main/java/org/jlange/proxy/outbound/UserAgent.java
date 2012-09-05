@@ -31,16 +31,7 @@ import org.jlange.proxy.util.RemoteAddress;
 
 public class UserAgent {
 
-    private Integer       timeout = 30;
     private RemoteAddress proxy   = null;
-
-    public Integer getTimeout() {
-        return timeout;
-    }
-
-    public void setTimeout(final Integer timeout) {
-        this.timeout = timeout;
-    }
 
     public RemoteAddress getProxy() {
         return proxy;
@@ -70,7 +61,7 @@ public class UserAgent {
         final ChannelPipelineFactoryBuilder builder = new ChannelPipelineFactoryBuilder() {
             @Override
             public ChannelPipelineFactory getChannelPipelineFactory() {
-                return new HttpPipelineFactory(timeout);
+                return new HttpPipelineFactory();
             }
         };
 
