@@ -1,7 +1,11 @@
 package org.jlange.proxy.util;
 
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.util.CharsetUtil;
 
 public class HttpHeaders2 {
 
@@ -83,6 +87,41 @@ public class HttpHeaders2 {
     public static final Boolean isPNG(final HttpResponse response) {
         String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
         return contentType != null && contentType.equals(ContentType.IMAGE_PNG);
+    }
+
+    /**
+     * Reads the content of the {@link HttpResponse} and tries to determine the correct encoding
+     * 
+     * @param response {@link HttpResponse}
+     * @return a suggestion of the contents encoding
+     */
+    public static final Charset getCharset(final HttpResponse response) {
+        Charset encoding = null;
+
+        String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE, "");
+
+        if (contentType.contains("charset")) {
+            try {
+                String charsetName = contentType.toUpperCase().replaceAll("\\w+/[\\w-]+\\s*?;\\s*?CHARSET=([\\w-]+)\\s*?;?", "$1");
+                encoding = Charset.forName(charsetName);
+            } catch (IllegalCharsetNameException e) {}
+        }
+
+        if (encoding == null) {
+            // try to suggest encoding
+            encoding = CharsetUtil.UTF_8;
+            String content = response.getContent().toString(encoding);
+
+            // FIXME: regex does not work, nevertheless it works through bad character finding
+            if (content.matches("<head>.*?charset\\s*?=\\s*?iso-8859-1.*?</head>")) {
+                encoding = CharsetUtil.ISO_8859_1;
+            } else if (content.contains("�")) {
+                encoding = CharsetUtil.ISO_8859_1;
+            }
+            // TODO: other cases for encodings
+        }
+
+        return encoding;
     }
 
 }
