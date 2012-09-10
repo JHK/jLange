@@ -159,7 +159,11 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
         try {
             final URL url = new URL(request.getUri());
             final StringBuilder sb = new StringBuilder();
-            sb.append(url.getPath());
+            final String path = url.getPath();
+            if (path.equals(""))
+                sb.append("/");
+            else
+                sb.append(url.getPath());
             if (url.getQuery() != null)
                 sb.append("?").append(url.getQuery());
             request.setUri(sb.toString());
