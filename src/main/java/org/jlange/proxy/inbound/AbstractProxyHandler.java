@@ -19,7 +19,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
@@ -29,12 +28,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.stream.ChunkedInput;
 import org.jlange.proxy.outbound.UserAgent;
 import org.jlange.proxy.plugin.PluginProvider;
 import org.jlange.proxy.plugin.PredefinedResponsePlugin;
@@ -206,65 +201,10 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
                 log.info("Channel {} - try to send response to closed channel - skipped", channel.getId());
                 future = Channels.failedFuture(channel, new ClosedChannelException());
             } else {
-                future = channel.write(new ChunkedHttpResponse(response));
+                future = channel.write(response);
             }
 
             return future;
         }
-    }
-
-    /**
-     * Split up one big {@link HttpResponse} into chunks.
-     */
-    protected class ChunkedHttpResponse implements ChunkedInput {
-
-        private final HttpResponse     response;
-        private final Queue<HttpChunk> chunks;
-        private boolean                isResponseWritten;
-
-        public ChunkedHttpResponse(final HttpResponse response) {
-            if (response.isChunked())
-                throw new IllegalArgumentException("response must not be chunked");
-
-            this.chunks = new LinkedList<HttpChunk>();
-            this.response = response;
-            this.isResponseWritten = false;
-
-            if (response.getContent().readableBytes() > Config.CHUNK_SIZE) {
-                while (Config.CHUNK_SIZE < response.getContent().readableBytes()) {
-                    chunks.add(new DefaultHttpChunk(response.getContent().readSlice(Config.CHUNK_SIZE)));
-                }
-                chunks.add(new DefaultHttpChunk(response.getContent().readSlice(response.getContent().readableBytes())));
-                chunks.add(HttpChunk.LAST_CHUNK);
-
-                response.setContent(ChannelBuffers.EMPTY_BUFFER);
-                response.setChunked(true);
-                response.setHeader(HttpHeaders.Names.TRANSFER_ENCODING, HttpHeaders.Values.CHUNKED);
-            }
-        }
-
-        @Override
-        public boolean hasNextChunk() throws Exception {
-            return !isResponseWritten || !chunks.isEmpty();
-        }
-
-        @Override
-        public Object nextChunk() throws Exception {
-            if (!isResponseWritten) {
-                isResponseWritten = true;
-                return response;
-            } else {
-                HttpChunk chunk = chunks.poll();
-                return chunk;
-            }
-        }
-
-        @Override
-        public boolean isEndOfInput() throws Exception {
-            return isResponseWritten && chunks.isEmpty();
-        }
-
-        @Override
-        public void close() {}
     }
 }

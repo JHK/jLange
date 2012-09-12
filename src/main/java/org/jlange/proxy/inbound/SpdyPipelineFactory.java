@@ -27,6 +27,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.spdy.DefaultSpdySettingsFrame;
@@ -35,7 +36,6 @@ import org.jboss.netty.handler.codec.spdy.SpdyHttpCodec;
 import org.jboss.netty.handler.codec.spdy.SpdySessionHandler;
 import org.jboss.netty.handler.codec.spdy.SpdySettingsFrame;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jlange.proxy.inbound.ssl.KeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SelfSignedKeyStoreManager;
 import org.jlange.proxy.inbound.ssl.SslContextFactory;
@@ -67,7 +67,9 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
         NextProtoNego.put(engine, new SimpleServerProvider());
         NextProtoNego.debug = log.isDebugEnabled();
 
-        pipeline.addLast("ssl", new SslHandler(engine));
+        SslHandler ssl = new SslHandler(engine);
+        ssl.setCloseOnSSLException(true);
+        pipeline.addLast("ssl", ssl);
         pipeline.addLast("http_or_spdy", new HttpOrSpdyDecoder());
 
         return pipeline;
@@ -94,7 +96,6 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http", new SpdyHttpCodec(3, 2 * 1024 * 1024));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
-                pipeline.addLast("chunkWriter", new ChunkedWriteHandler());
                 pipeline.addLast("proxy", new SpdyProxyHandler());
 
                 // remove this handler, and process the requests as SPDY
@@ -106,7 +107,6 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("encoder", new HttpResponseEncoder());
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-                pipeline.addLast("chunkWriter", new ChunkedWriteHandler());
                 pipeline.addLast("proxy", new HttpProxyHandler());
 
                 // remove this handler, and process the requests as HTTP

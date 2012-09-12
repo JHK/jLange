@@ -29,6 +29,7 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpContentCompressor;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
@@ -36,7 +37,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jlange.proxy.outbound.OutboundChannelPool;
 import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.IdleShutdownHandler;
@@ -89,7 +89,6 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
             } else {
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-                pipeline.addLast("chunkWriter", new ChunkedWriteHandler());
                 pipeline.addLast("proxy", new HttpProxyHandler());
 
                 pipeline.remove(this);
