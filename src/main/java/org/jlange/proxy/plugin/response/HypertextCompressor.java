@@ -62,7 +62,6 @@ public class HypertextCompressor implements ResponsePlugin {
 
         try {
             final String uri = new URI("http", HttpHeaders.getHost(request), request.getUri(), null).toString().toLowerCase();
-            log.warn(uri);
             for (String bad_uri : BAD_URIS)
                 if (uri.equals(bad_uri)) {
                     log.debug("skip {} - considered bad", uri);
