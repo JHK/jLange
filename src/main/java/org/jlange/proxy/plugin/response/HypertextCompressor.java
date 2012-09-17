@@ -13,6 +13,8 @@
  */
 package org.jlange.proxy.plugin.response;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -31,7 +33,9 @@ import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
 
 public class HypertextCompressor implements ResponsePlugin {
 
-    private final Logger         log = LoggerFactory.getLogger(HypertextCompressor.class);
+    private final String[]       BAD_URIS = new String[] { "http://www.google.de/" };
+
+    private final Logger         log      = LoggerFactory.getLogger(HypertextCompressor.class);
     private final HtmlCompressor compressor;
 
     public HypertextCompressor() {
@@ -50,8 +54,26 @@ public class HypertextCompressor implements ResponsePlugin {
 
     @Override
     public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
-        return response.getStatus().equals(HttpResponseStatus.OK)
-                && (HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response));
+        if (!response.getStatus().equals(HttpResponseStatus.OK))
+            return false;
+
+        if (!(HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response)))
+            return false;
+
+        try {
+            final String uri = new URI("http", HttpHeaders.getHost(request), request.getUri(), null).toString().toLowerCase();
+            log.warn(uri);
+            for (String bad_uri : BAD_URIS)
+                if (uri.equals(bad_uri)) {
+                    log.debug("skip {} - considered bad", uri);
+                    return false;
+                }
+        } catch (URISyntaxException e) {
+            log.error(e.getMessage());
+            return false;
+        }
+
+        return true;
     }
 
     @Override
