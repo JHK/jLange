@@ -16,15 +16,13 @@ package org.jlange.proxy.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.jlange.proxy.plugin.predefinedResponse.RequestPolicy;
-import org.jlange.proxy.plugin.response.HypertextCompressor;
-import org.jlange.proxy.plugin.response.ImageCompressor;
-import org.jlange.proxy.plugin.response.ResponseHeaderOptimizer;
-import org.jlange.proxy.plugin.response.WeakCacheHeader;
 import org.jlange.proxy.util.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PluginProvider {
 
+    private final static Logger         log      = LoggerFactory.getLogger(PluginProvider.class);
     private final static PluginProvider instance = new PluginProvider();
 
     public static PluginProvider getInstance() {
@@ -37,22 +35,27 @@ public class PluginProvider {
     private PluginProvider() {
         responsePlugins = new ArrayList<ResponsePlugin>();
 
-        if (Config.isPluginEnabled(ResponseHeaderOptimizer.class))
-            responsePlugins.add(new ResponseHeaderOptimizer());
-
-        if (Config.isPluginEnabled(WeakCacheHeader.class))
-            responsePlugins.add(new WeakCacheHeader());
-
-        if (Config.isPluginEnabled(HypertextCompressor.class))
-            responsePlugins.add(new HypertextCompressor());
-
-        if (Config.isPluginEnabled(ImageCompressor.class))
-            responsePlugins.add(new ImageCompressor());
+        for (String plugin : Config.PLUGINS_RESPONSE) {
+            try {
+                Class<?> className = Class.forName(plugin);
+                responsePlugins.add((ResponsePlugin) className.newInstance());
+                log.info("Plugin loaded: {}", plugin);
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                log.error("Could not load plugin: {}", e.getMessage());
+            }
+        }
 
         predefinedResponsePlugins = new ArrayList<PredefinedResponsePlugin>();
 
-        if (Config.isPluginEnabled(RequestPolicy.class))
-            predefinedResponsePlugins.add(new RequestPolicy());
+        for (String plugin : Config.PLUGINS_PREDEFINED) {
+            try {
+                Class<?> className = Class.forName(plugin);
+                predefinedResponsePlugins.add((PredefinedResponsePlugin) className.newInstance());
+                log.info("Plugin loaded: {}", plugin);
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                log.error("Could not load plugin: {}", e.getMessage());
+            }
+        }
     }
 
     public List<ResponsePlugin> getResponsePlugins() {

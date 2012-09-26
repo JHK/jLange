@@ -14,6 +14,8 @@
 package org.jlange.proxy.util;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -38,8 +40,19 @@ public class Config {
     public static final Integer       CHUNK_SIZE           = getConfig().getInteger("org.jlange.proxy.chunk_size", 8196);
     public static final File          TMP_DIRECTORY        = buildTmpDirectory();
 
-    public static Boolean isPluginEnabled(final Class<?> plugin) {
-        return getConfig().getBoolean(plugin.getName() + ".enabled", true);
+    public static final String[]      PLUGINS_RESPONSE     = getConfig().getStringArray("org.jlange.plugin.response");
+    public static final String[]      PLUGINS_PREDEFINED   = getConfig().getStringArray("org.jlange.plugin.predefined");
+
+    public static Configuration getPluginConfig(Class<?> plugin) {
+        if (pluginConfig.get(plugin) == null) {
+            try {
+                pluginConfig.put(plugin, new PropertiesConfiguration(plugin.getName() + ".properties"));
+            } catch (ConfigurationException e) {
+                pluginConfig.put(plugin, new PropertiesConfiguration());
+            }
+        }
+
+        return pluginConfig.get(plugin);
     }
 
     private static File buildTmpDirectory() {
@@ -65,7 +78,8 @@ public class Config {
             return null;
     }
 
-    private static Configuration config;
+    private static Configuration                config;
+    private static Map<Class<?>, Configuration> pluginConfig = new HashMap<Class<?>, Configuration>();
 
     private static Configuration getConfig() {
         if (config == null) {
