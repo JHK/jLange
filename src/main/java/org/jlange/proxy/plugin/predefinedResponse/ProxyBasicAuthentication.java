@@ -56,8 +56,10 @@ public class ProxyBasicAuthentication implements PredefinedResponsePlugin {
 
                 if (credentials.length == 2 && credentials[0] != null && credentials[1] != null && !credentials[0].contains("\r")) {
 
-                    if (this.credentials.validate(credentials[0], credentials[1]))
+                    if (this.credentials.validate(credentials[0], credentials[1])) {
+                        request.removeHeader(HttpHeaders.Names.PROXY_AUTHORIZATION);
                         return null;
+                    }
                 }
             }
         }
