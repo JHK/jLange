@@ -13,8 +13,6 @@
  */
 package org.jlange.proxy.plugin.response;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -60,17 +58,12 @@ public class HypertextCompressor implements ResponsePlugin {
         if (!(HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response)))
             return false;
 
-        try {
-            final String uri = new URI("http", HttpHeaders.getHost(request), request.getUri(), null).toString().toLowerCase();
-            for (String bad_uri : BAD_URIS)
-                if (uri.equals(bad_uri)) {
-                    log.debug("skip {} - considered bad", uri);
-                    return false;
-                }
-        } catch (URISyntaxException e) {
-            log.error(e.getMessage());
-            return false;
-        }
+        final String uri = "http://" + HttpHeaders.getHost(request) + request.getUri();
+        for (String bad_uri : BAD_URIS)
+            if (uri.equals(bad_uri)) {
+                log.debug("skip {} - considered bad", uri);
+                return false;
+            }
 
         return true;
     }
