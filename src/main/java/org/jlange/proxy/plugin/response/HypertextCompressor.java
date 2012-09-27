@@ -45,8 +45,8 @@ public class HypertextCompressor implements ResponsePlugin {
         compressor.setRemoveComments(true);
         compressor.setRemoveIntertagSpaces(false);
         compressor.setRemoveScriptAttributes(true);
-        compressor.setRemoveQuotes(true);
         compressor.setSimpleBooleanAttributes(true);
+        compressor.setPreserveLineBreaks(true);
 
         if (log.isDebugEnabled())
             compressor.setGenerateStatistics(true);
