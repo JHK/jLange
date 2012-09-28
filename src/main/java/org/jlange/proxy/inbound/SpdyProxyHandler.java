@@ -22,6 +22,7 @@ import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
@@ -52,6 +53,7 @@ public class SpdyProxyHandler extends AbstractProxyHandler implements ChannelHan
             @Override
             public void responseReceived(final HttpResponse response) {
                 // Protocol Version
+                HttpHeaders2.setVia(response, response.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
                 response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
                 // SPDY

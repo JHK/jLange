@@ -20,7 +20,7 @@ import org.jlange.proxy.plugin.ResponsePlugin;
 
 public class ResponseHeaderOptimizer implements ResponsePlugin {
 
-    private final String[] removeableHeaders = new String[] { "P3P", "Server", "Via", "Generator" };
+    private final String[] removeableHeaders = new String[] { "P3P", "Server", "Generator" };
 
     @Override
     public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {

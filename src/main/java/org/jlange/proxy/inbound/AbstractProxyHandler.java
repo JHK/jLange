@@ -107,6 +107,7 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
         // update requests
         request.removeHeader(HttpHeaders2.SPDY.STREAM_ID);
         request.removeHeader(HttpHeaders2.Proxy.CONNECTION);
+        HttpHeaders2.setVia(request, request.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
         updateRequestUri(request);
 
         // request plugins

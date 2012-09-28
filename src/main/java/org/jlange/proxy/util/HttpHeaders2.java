@@ -4,7 +4,9 @@ import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 
 import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
 
 public class HttpHeaders2 {
@@ -122,6 +124,29 @@ public class HttpHeaders2 {
         }
 
         return encoding;
+    }
+
+    /**
+     * Adds a Via header to the given message. If there is already one the header will be appended. The parameter comment is optional and
+     * may be null.
+     * 
+     * @param message HttpRequest or HttpResponse
+     * @param version the version of the incoming HttpRequest or HttpResponse to the proxy
+     * @param hostname a generic name or the IP of the proxy
+     * @param comment may be null, for further information
+     */
+    public static void setVia(HttpMessage message, HttpVersion version, String hostname, String comment) {
+        String currentVia = HttpHeaders.getHeader(message, HttpHeaders.Names.VIA);
+        String thisVia = version.getMajorVersion() + "." + version.getMinorVersion() + " " + hostname
+                + (comment == null ? "" : " (" + comment + ")");
+
+        String newVia;
+        if (currentVia == null)
+            newVia = thisVia;
+        else
+            newVia = currentVia + ", " + thisVia;
+
+        HttpHeaders.setHeader(message, HttpHeaders.Names.VIA, newVia);
     }
 
 }

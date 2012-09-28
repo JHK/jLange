@@ -26,6 +26,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.slf4j.Logger;
@@ -89,6 +90,7 @@ public class HttpProxyHandler extends AbstractProxyHandler implements ChannelHan
             @Override
             public void responseReceived(final HttpResponse response) {
                 // set protocol version
+                HttpHeaders2.setVia(response, response.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
                 response.setProtocolVersion(HttpVersion.HTTP_1_1);
 
                 // Keep alive

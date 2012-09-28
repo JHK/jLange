@@ -36,6 +36,8 @@ public class Config {
     public static final String        SPDY_KEY_STORE       = getConfig().getString("org.jlange.proxy.spdy.ssl.store");
     public static final String        SPDY_KEY_PASS        = getConfig().getString("org.jlange.proxy.spdy.ssl.key");
 
+    public static final String        VIA_HOSTNAME         = getConfig().getString("org.jlange.proxy.via.hostname", "jLange");
+    public static final String        VIA_COMMENT          = getConfig().getString("org.jlange.proxy.via.comment", null);
     public static final Integer       COMPRESSION_LEVEL    = getConfig().getInteger("org.jlange.proxy.compression_level", 7);
     public static final Integer       CHUNK_SIZE           = getConfig().getInteger("org.jlange.proxy.chunk_size", 8196);
     public static final File          TMP_DIRECTORY        = buildTmpDirectory();
