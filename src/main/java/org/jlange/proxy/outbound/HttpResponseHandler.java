@@ -44,10 +44,6 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         httpResponseListenerQueue = new LinkedList<HttpResponseListener>();
     }
 
-    public void addResponseListener(final HttpResponseListener httpResponseListener) {
-        this.httpResponseListenerQueue.add(httpResponseListener);
-    }
-
     public void setResponseListener(final Queue<HttpResponseListener> httpResponseListenerQueue) {
         this.httpResponseListenerQueue = httpResponseListenerQueue;
     }
@@ -79,7 +75,8 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         }
         final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
         HttpHeaders.setContentLength(response, response.getContent().readableBytes());
-        responseReceived(response);
+        for (HttpResponseListener listener : httpResponseListenerQueue)
+        	listener.responseReceived(response);
     }
 
     @Override
@@ -96,19 +93,13 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
 
         final Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
 
-        responseReceived(response);
+        for (HttpResponseListener listener : httpResponseListenerQueue)
+        	listener.responseReceived(response);
 
         if (isKeepAlive)
             e.getFuture().addListener(OutboundChannelPool.IDLE);
         else
             e.getFuture().addListener(ChannelFutureListener.CLOSE);
 
-    }
-
-    private void responseReceived(final HttpResponse response) {
-        // it might be useful to run this in a different process
-        HttpResponseListener httpResponseListener;
-        while ((httpResponseListener = httpResponseListenerQueue.poll()) != null)
-            httpResponseListener.responseReceived(response);
     }
 }
