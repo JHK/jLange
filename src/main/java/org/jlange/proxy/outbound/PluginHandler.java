@@ -46,7 +46,7 @@ public class PluginHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpResponse response = (HttpResponse) e.getMessage();
-        log.info("Channel {} - Response received", ctx.getChannel().getId());
+        log.debug("Channel {} - Response received", ctx.getChannel().getId());
 
         // apply response plugins
         for (ResponsePlugin plugin : responsePlugins) {
@@ -63,7 +63,7 @@ public class PluginHandler extends SimpleChannelHandler {
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
-        log.info("Channel {} - Request received {}", ctx.getChannel().getId(), request.getHeader(HttpHeaders.Names.HOST) + request.getUri());
+        log.debug("Channel {} - Request received {}", ctx.getChannel().getId(), request.getHeader(HttpHeaders.Names.HOST) + request.getUri());
 
         // apply request to predefined response plugins
         HttpResponse response;
