@@ -51,19 +51,24 @@ public class HypertextCompressor implements ResponsePlugin {
     }
 
     @Override
-    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
-        if (!response.getStatus().equals(HttpResponseStatus.OK))
-            return false;
-
-        if (!(HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response)))
-            return false;
-
+    public Boolean isApplicable(final HttpRequest request) {
         final String uri = "http://" + HttpHeaders.getHost(request) + request.getUri();
         for (String bad_uri : BAD_URIS)
             if (uri.equals(bad_uri)) {
                 log.debug("skip {} - considered bad", uri);
                 return false;
             }
+
+        return true;
+    }
+
+    @Override
+    public Boolean isApplicable(final HttpResponse response) {
+        if (!response.getStatus().equals(HttpResponseStatus.OK))
+            return false;
+
+        if (!(HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response)))
+            return false;
 
         return true;
     }

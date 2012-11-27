@@ -39,10 +39,12 @@ public class ImageCompressor implements ResponsePlugin {
     private static Boolean      isEnabled = true;
 
     @Override
-    public Boolean isApplicable(final HttpRequest request, final HttpResponse response) {
-        if (!isEnabled)
-            return false;
+    public Boolean isApplicable(final HttpRequest request) {
+        return isEnabled;
+    }
 
+    @Override
+    public Boolean isApplicable(final HttpResponse response) {
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;
 

@@ -32,6 +32,7 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
         pipeline.addLast("aggregator", new HttpChunkAggregator(Config.MAX_RESPONSE_SIZE));
         pipeline.addLast("inflater", new HttpContentDecompressor());
+        pipeline.addLast("plugin", new PluginHandler());
         pipeline.addLast("idle", new IdleShutdownHandler(0, Config.OUTBOUND_TIMEOUT));
         pipeline.addLast("handler", new HttpResponseHandler());
 

@@ -31,9 +31,6 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.outbound.UserAgent;
-import org.jlange.proxy.plugin.PluginProvider;
-import org.jlange.proxy.plugin.PredefinedResponsePlugin;
-import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
@@ -70,37 +67,13 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
      */
     protected abstract HttpResponseListener getWriteHttpResponseListener(final HttpRequest request, final Channel channel);
 
-    /**
-     * Builds a {@link HttpResponseListener} to update the response with all plugins applicable to the request and response
-     * 
-     * @param request the {@link HttpRequest} to check the applicability against
-     * @return a {@link HttpResponseListener} applying all applicable plugins
-     */
-    protected HttpResponseListener getPluginHttpResponseListener(final HttpRequest request) {
-        return new HttpResponseListener() {
-            @Override
-            public void responseReceived(final HttpResponse response) {
-                // apply response plugins
-                for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins()) {
-                    if (plugin.isApplicable(request, response)) {
-                        log.debug("Using plugin {} - {}", plugin.getClass().getName(), request.getUri());
-                        plugin.run(request, response);
-                    }
-                }
-            }
-        };
-    }
-
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
         final HttpRequest request = (HttpRequest) e.getMessage();
         final Channel inboundChannel = e.getChannel();
 
-        // response plugins and response listener
-        // they need to be first one in place, because the response may depend on the original request (like special proxy headers)
         final Queue<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
         // TODO error response handling
-        httpResponseListenerList.add(getPluginHttpResponseListener(request));
         httpResponseListenerList.add(getProtocolHttpResponseListener(request));
         httpResponseListenerList.add(getWriteHttpResponseListener(request, inboundChannel));
 
@@ -109,18 +82,6 @@ public abstract class AbstractProxyHandler extends SimpleChannelUpstreamHandler 
         request.removeHeader(HttpHeaders2.Proxy.CONNECTION);
         HttpHeaders2.setVia(request, request.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
         updateRequestUri(request);
-
-        // request plugins
-        // TODO: implement
-
-        // request to predefined response plugins
-        HttpResponse response;
-        for (PredefinedResponsePlugin plugin : PluginProvider.getInstance().getPredefinedResponsePlugins())
-            if ((response = plugin.getPredefinedResponse(request)) != null) {
-                for (HttpResponseListener listener : httpResponseListenerList)
-                    listener.responseReceived(response);
-                return;
-            }
 
         ua.request(request, httpResponseListenerList);
     }
