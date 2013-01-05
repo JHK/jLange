@@ -89,7 +89,8 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
             } else {
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-                pipeline.addLast("proxy", new HttpProxyHandler());
+                pipeline.addLast("mapping", new HttpRequestResponseHandler());
+                pipeline.addLast("proxy", new ProxyHandler());
 
                 pipeline.remove(this);
                 ctx.sendUpstream(e);

@@ -24,20 +24,17 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.OutboundChannelPool.ChannelPipelineFactoryBuilder;
+import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpHeaders2;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.jlange.proxy.util.RemoteAddress;
 
 public class UserAgent {
 
-    private RemoteAddress proxy   = null;
+    private RemoteAddress proxy;
 
-    public RemoteAddress getProxy() {
-        return proxy;
-    }
-
-    public void setProxy(final RemoteAddress proxy) {
-        this.proxy = proxy;
+    public UserAgent() {
+        proxy = Config.PROXY_CHAIN;
     }
 
     public void request(final HttpRequest request, final Queue<HttpResponseListener> responseListenerList) throws MalformedURLException {

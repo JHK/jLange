@@ -98,7 +98,9 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("spdy_setup", new SpdySetupHandler());
                 pipeline.addLast("spdy_http", new SpdyHttpCodec(3, 2 * 1024 * 1024));
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
-                pipeline.addLast("proxy", new SpdyProxyHandler());
+                pipeline.addLast("synchronze", new ThreadSafeWriteHandler());
+                pipeline.addLast("mapping", new SpdyRequestResponseHandler());
+                pipeline.addLast("proxy", new ProxyHandler());
 
                 // remove this handler, and process the requests as SPDY
                 pipeline.remove(this);
@@ -109,7 +111,8 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 pipeline.addLast("encoder", new HttpResponseEncoder());
                 pipeline.addLast("deflater", new HttpContentCompressor(Config.COMPRESSION_LEVEL));
                 pipeline.addLast("idle", new IdleShutdownHandler(300, 0));
-                pipeline.addLast("proxy", new HttpProxyHandler());
+                pipeline.addLast("mapping", new HttpRequestResponseHandler());
+                pipeline.addLast("proxy", new ProxyHandler());
 
                 // remove this handler, and process the requests as HTTP
                 pipeline.remove(this);
@@ -155,7 +158,7 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
                 ctx.getChannel().write(frame);
                 ctx.getPipeline().remove(this);
             }
-            
+
             super.messageReceived(ctx, e);
         }
 
