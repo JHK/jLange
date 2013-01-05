@@ -45,8 +45,8 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         httpResponseListenerQueue = new LinkedList<HttpResponseListener>();
     }
 
-    public void setResponseListener(final Queue<HttpResponseListener> httpResponseListenerQueue) {
-        this.httpResponseListenerQueue = httpResponseListenerQueue;
+    public void setResponseListener(HttpResponseListener httpResponseListener) {
+        httpResponseListenerQueue.add(httpResponseListener);
     }
 
     public void sendRequest(final ChannelFuture future, final HttpRequest request) {

@@ -16,8 +16,6 @@ package org.jlange.proxy.inbound;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -47,8 +45,7 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
         final HttpRequest request = updateRequest(requestResponse.removeRequest());
         final boolean keepAlive = getAndCleanProxyKeepAlive(request);
 
-        Queue<HttpResponseListener> httpResponseListenerList = new LinkedList<HttpResponseListener>();
-        httpResponseListenerList.add(new HttpResponseListener() {
+        ua.request(request, new HttpResponseListener() {
             @Override
             public void responseReceived(HttpResponse response) {
                 requestResponse.setResponse(updateResponse(response, keepAlive));
@@ -56,8 +53,6 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
                     ctx.getChannel().write(requestResponse);
             }
         });
-
-        ua.request(request, httpResponseListenerList);
     }
 
     @Override
