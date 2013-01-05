@@ -75,8 +75,8 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
         }
         final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
         HttpHeaders.setContentLength(response, response.getContent().readableBytes());
-        for (HttpResponseListener listener : httpResponseListenerQueue)
-        	listener.responseReceived(response);
+        while (!httpResponseListenerQueue.isEmpty())
+            httpResponseListenerQueue.remove().responseReceived(response);
     }
 
     @Override
@@ -93,8 +93,8 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
 
         final Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
 
-        for (HttpResponseListener listener : httpResponseListenerQueue)
-        	listener.responseReceived(response);
+        while (!httpResponseListenerQueue.isEmpty())
+            httpResponseListenerQueue.remove().responseReceived(response);
 
         if (isKeepAlive)
             e.getFuture().addListener(OutboundChannelPool.IDLE);
