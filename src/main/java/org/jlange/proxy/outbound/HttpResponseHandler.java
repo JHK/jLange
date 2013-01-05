@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.outbound;
 
+import java.io.IOException;
 import java.net.ConnectException;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -72,6 +73,9 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
             } else {
                 log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
             }
+        } else if (e.getCause() instanceof IOException) {
+            // another way for remote closed keep-alive connection
+            log.info("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
         } else {
             log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
             log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
