@@ -66,8 +66,12 @@ public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
         if (e.getCause() instanceof ConnectException) {
-            // connection timed out
-            log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+            // connection timed out or remote closed keep-alive connection
+            if (httpResponseListenerQueue.isEmpty()) {
+                log.info("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+            } else {
+                log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
+            }
         } else {
             log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
             log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
