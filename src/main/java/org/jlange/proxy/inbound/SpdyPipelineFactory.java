@@ -140,23 +140,22 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
 
     }
 
-    private final class SpdySetupHandler implements ChannelUpstreamHandler {
-
-        private boolean setupComplete = false;
+    private final class SpdySetupHandler extends SimpleChannelUpstreamHandler {
 
         @Override
-        public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent evt) {
-            if (!setupComplete && ctx.getChannel().isConnected()) {
+        public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
+            if (ctx.getChannel().isConnected()) {
                 log.info("Channel {} - apply default setup", ctx.getChannel().getId());
-                setupComplete = true;
                 SpdySettingsFrame frame = new DefaultSpdySettingsFrame();
                 frame.setValue(SpdySettingsFrame.SETTINGS_MAX_CONCURRENT_STREAMS, 100);
                 frame.setValue(SpdySettingsFrame.SETTINGS_INITIAL_WINDOW_SIZE, 65536);
                 frame.setValue(SpdySettingsFrame.SETTINGS_ROUND_TRIP_TIME, 200);
                 ctx.getChannel().write(frame);
+                ctx.getPipeline().remove(this);
             }
-
-            ctx.sendUpstream(evt);
+            
+            super.messageReceived(ctx, e);
         }
+
     }
 }
