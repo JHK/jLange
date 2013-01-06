@@ -61,13 +61,13 @@ public class LogHandler extends SimpleChannelHandler {
 
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - channelOpen", getChannelId(ctx));
+        log.debug("Channel {} - channelOpen", getChannelId(ctx));
         super.channelOpen(ctx, e);
     }
 
     @Override
     public void channelBound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - channelBound", getChannelId(ctx));
+        log.debug("Channel {} - channelBound", getChannelId(ctx));
         super.channelBound(ctx, e);
     }
 
@@ -91,13 +91,13 @@ public class LogHandler extends SimpleChannelHandler {
 
     @Override
     public void channelUnbound(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - channelUnbound", getChannelId(ctx));
+        log.debug("Channel {} - channelUnbound", getChannelId(ctx));
         super.channelUnbound(ctx, e);
     }
 
     @Override
     public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - channelClosed", getChannelId(ctx));
+        log.debug("Channel {} - channelClosed", getChannelId(ctx));
         super.channelClosed(ctx, e);
     }
 
@@ -121,31 +121,31 @@ public class LogHandler extends SimpleChannelHandler {
 
     @Override
     public void bindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - bindRequested", getChannelId(ctx));
+        log.debug("Channel {} - bindRequested", getChannelId(ctx));
         super.bindRequested(ctx, e);
     }
 
     @Override
     public void connectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - connectRequested", getChannelId(ctx));
+        log.debug("Channel {} - connectRequested", getChannelId(ctx));
         super.connectRequested(ctx, e);
     }
 
     @Override
     public void disconnectRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - disconnectRequested", getChannelId(ctx));
+        log.debug("Channel {} - disconnectRequested", getChannelId(ctx));
         super.disconnectRequested(ctx, e);
     }
 
     @Override
     public void unbindRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - unbindRequested", getChannelId(ctx));
+        log.debug("Channel {} - unbindRequested", getChannelId(ctx));
         super.unbindRequested(ctx, e);
     }
 
     @Override
     public void closeRequested(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - closeRequested", getChannelId(ctx));
+        log.debug("Channel {} - closeRequested", getChannelId(ctx));
         super.closeRequested(ctx, e);
     }
 
