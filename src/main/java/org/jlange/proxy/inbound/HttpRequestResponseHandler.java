@@ -13,6 +13,9 @@
  */
 package org.jlange.proxy.inbound;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
@@ -22,32 +25,47 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 
 public class HttpRequestResponseHandler extends SimpleChannelHandler {
 
-    // TODO: implement pipelining
-    
+    private int                        currentRequestId = 0;
+    private int                        maxRequestId     = 0;
+    private Map<Integer, HttpResponse> responseMap      = new HashMap<Integer, HttpResponse>();
+
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
-        RequestResponse requestResponse = new HttpRequestResponse(request);
+        RequestResponse requestResponse = new HttpRequestResponse(request, maxRequestId);
         Channels.fireMessageReceived(ctx, requestResponse);
+        maxRequestId++;
     }
 
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        if (e.getMessage() instanceof RequestResponse) {
-            RequestResponse requestResponse = (RequestResponse) e.getMessage();
-            ctx.getChannel().write(requestResponse.getResponse());
-        } else {
+        if (!(e.getMessage() instanceof RequestResponse)) {
             super.writeRequested(ctx, e);
+            return;
+        }
+
+        HttpRequestResponse requestResponse = (HttpRequestResponse) e.getMessage();
+        synchronized (responseMap) {
+            responseMap.put(requestResponse.getRequestId(), requestResponse.getResponse());
+
+            HttpResponse response;
+            while ((response = responseMap.remove(currentRequestId)) != null) {
+                currentRequestId++;
+                if (ctx.getChannel().isConnected())
+                    ctx.getChannel().write(response);
+            }
         }
     }
 
-    private class HttpRequestResponse implements RequestResponse {
+    class HttpRequestResponse implements RequestResponse {
 
+        private int          requestId;
         private HttpRequest  request;
         private HttpResponse response;
 
-        public HttpRequestResponse(HttpRequest request) {
+        public HttpRequestResponse(HttpRequest request, int requestId) {
             setRequest(request);
+            this.requestId = requestId;
         }
 
         @Override
@@ -70,6 +88,10 @@ public class HttpRequestResponseHandler extends SimpleChannelHandler {
         @Override
         public HttpResponse getResponse() {
             return response;
+        }
+
+        public int getRequestId() {
+            return requestId;
         }
     }
 }
