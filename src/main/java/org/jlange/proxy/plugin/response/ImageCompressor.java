@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.Config;
-import org.jlange.proxy.util.HttpHeaders2;
+import org.jlange.proxy.util.HttpContentHeaders;
 import org.jlange.proxy.util.Tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,13 +51,13 @@ public class ImageCompressor implements ResponsePlugin {
         if (HttpHeaders.getHeader(response, HttpHeaders.Names.CACHE_CONTROL, "").contains(HttpHeaders.Values.NO_TRANSFORM))
             return false;
 
-        return HttpHeaders2.isJPG(response) || HttpHeaders2.isPNG(response);
+        return HttpContentHeaders.isJPG(response) || HttpContentHeaders.isPNG(response);
     }
 
     @Override
     public void run(final HttpRequest request, final HttpResponse response) {
         String uniqueName = String.valueOf(Thread.currentThread().getId());
-        ImageType type = HttpHeaders2.isJPG(response) ? new JPG(uniqueName) : HttpHeaders2.isPNG(response) ? new PNG(uniqueName) : null;
+        ImageType type = HttpContentHeaders.isJPG(response) ? new JPG(uniqueName) : HttpContentHeaders.isPNG(response) ? new PNG(uniqueName) : null;
 
         try {
 

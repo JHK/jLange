@@ -1,26 +1,28 @@
+/**
+ * Copyright (C) 2012 Julian Knocke
+ * 
+ * This file is part of Fruchtzwerg.
+ * 
+ * Fruchtzwerg is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ * 
+ * Fruchtzwerg is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with Fruchtzwerg. If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.jlange.proxy.util;
 
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 
 import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.util.CharsetUtil;
 
-public class HttpHeaders2 {
+public class HttpContentHeaders {
 
-    public static final class Proxy {
-        public final static String CONNECTION = "Proxy-Connection";
-    }
-
-    public static final class SPDY {
-        public final static String STREAM_ID   = "X-SPDY-Stream-ID";
-        public final static String STREAM_PRIO = "X-SPDY-Stream-Priority";
-    }
-
-    public static final class ContentType {
+    public static final class Values {
         public final static String APP_JS    = "application/javascript";
         public final static String APP_XJS   = "application/x-javascript";
         public final static String IMAGE_JPG = "image/jpeg";
@@ -38,7 +40,7 @@ public class HttpHeaders2 {
      */
     public static final Boolean isHtml(final HttpResponse response) {
         String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.contains(ContentType.TEXT_HTML);
+        return contentType != null && contentType.contains(Values.TEXT_HTML);
     }
 
     /**
@@ -52,7 +54,7 @@ public class HttpHeaders2 {
 
         Boolean result = false;
         if (contentType != null)
-            for (String s : new String[] { ContentType.APP_JS, ContentType.APP_XJS, ContentType.TEXT_JS })
+            for (String s : new String[] { Values.APP_JS, Values.APP_XJS, Values.TEXT_JS })
                 result = result || contentType.contains(s);
 
         return result;
@@ -66,7 +68,7 @@ public class HttpHeaders2 {
      */
     public static final Boolean isCSS(final HttpResponse response) {
         String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.contains(ContentType.TEXT_CSS);
+        return contentType != null && contentType.contains(Values.TEXT_CSS);
     }
 
     /**
@@ -77,7 +79,7 @@ public class HttpHeaders2 {
      */
     public static final Boolean isJPG(final HttpResponse response) {
         String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.equals(ContentType.IMAGE_JPG);
+        return contentType != null && contentType.equals(Values.IMAGE_JPG);
     }
 
     /**
@@ -88,7 +90,7 @@ public class HttpHeaders2 {
      */
     public static final Boolean isPNG(final HttpResponse response) {
         String contentType = HttpHeaders.getHeader(response, HttpHeaders.Names.CONTENT_TYPE);
-        return contentType != null && contentType.equals(ContentType.IMAGE_PNG);
+        return contentType != null && contentType.equals(Values.IMAGE_PNG);
     }
 
     /**
@@ -125,28 +127,4 @@ public class HttpHeaders2 {
 
         return encoding;
     }
-
-    /**
-     * Adds a Via header to the given message. If there is already one the header will be appended. The parameter comment is optional and
-     * may be null.
-     * 
-     * @param message HttpRequest or HttpResponse
-     * @param version the version of the incoming HttpRequest or HttpResponse to the proxy
-     * @param hostname a generic name or the IP of the proxy
-     * @param comment may be null, for further information
-     */
-    public static void setVia(HttpMessage message, HttpVersion version, String hostname, String comment) {
-        String currentVia = HttpHeaders.getHeader(message, HttpHeaders.Names.VIA);
-        String thisVia = version.getMajorVersion() + "." + version.getMinorVersion() + " " + hostname
-                + (comment == null ? "" : " (" + comment + ")");
-
-        String newVia;
-        if (currentVia == null)
-            newVia = thisVia;
-        else
-            newVia = currentVia + ", " + thisVia;
-
-        HttpHeaders.setHeader(message, HttpHeaders.Names.VIA, newVia);
-    }
-
 }

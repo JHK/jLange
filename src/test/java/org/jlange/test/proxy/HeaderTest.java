@@ -7,7 +7,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jlange.proxy.util.HttpHeaders2;
+import org.jlange.proxy.util.HttpProxyHeaders;
 import org.junit.Test;
 
 public class HeaderTest {
@@ -18,10 +18,10 @@ public class HeaderTest {
 
         assertEquals(null, HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
 
-        HttpHeaders2.setVia(request, HttpVersion.HTTP_1_1, "hostname", null);
+        HttpProxyHeaders.setVia(request, HttpVersion.HTTP_1_1, "hostname", null);
         assertEquals("1.1 hostname", HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
 
-        HttpHeaders2.setVia(request, HttpVersion.HTTP_1_0, "hostname2", "jLange");
+        HttpProxyHeaders.setVia(request, HttpVersion.HTTP_1_0, "hostname2", "jLange");
         assertEquals("1.1 hostname, 1.0 hostname2 (jLange)", HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
     }
 

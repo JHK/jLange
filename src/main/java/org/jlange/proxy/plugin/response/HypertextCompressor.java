@@ -22,7 +22,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jlange.proxy.plugin.ResponsePlugin;
-import org.jlange.proxy.util.HttpHeaders2;
+import org.jlange.proxy.util.HttpContentHeaders;
 import org.mozilla.javascript.EvaluatorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +67,7 @@ public class HypertextCompressor implements ResponsePlugin {
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;
 
-        if (!(HttpHeaders2.isHtml(response) || HttpHeaders2.isJavascript(response) || HttpHeaders2.isCSS(response)))
+        if (!(HttpContentHeaders.isHtml(response) || HttpContentHeaders.isJavascript(response) || HttpContentHeaders.isCSS(response)))
             return false;
 
         return true;
@@ -75,7 +75,7 @@ public class HypertextCompressor implements ResponsePlugin {
 
     @Override
     public void run(final HttpRequest request, final HttpResponse response) {
-        final Charset encoding = HttpHeaders2.getCharset(response);
+        final Charset encoding = HttpContentHeaders.getCharset(response);
 
         try {
             final String content = compressor.compress(response.getContent().toString(encoding));

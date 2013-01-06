@@ -28,7 +28,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.UserAgent;
 import org.jlange.proxy.util.Config;
-import org.jlange.proxy.util.HttpHeaders2;
+import org.jlange.proxy.util.HttpProxyHeaders;
 import org.jlange.proxy.util.HttpResponseListener;
 
 public class ProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
@@ -65,7 +65,7 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
     }
 
     private HttpRequest updateRequest(HttpRequest request) {
-        HttpHeaders2.setVia(request, request.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
+        HttpProxyHeaders.setVia(request, request.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
 
         /*
          * {@link HttpRequest}s to proxies are made in a slightly different schema. The URI of the {@link HttpRequest} may be absolute, whereas
@@ -97,14 +97,14 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
     private HttpResponse updateResponse(HttpResponse response, boolean keepAlive) {
         response.setProtocolVersion(HttpVersion.HTTP_1_1);
         response.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        HttpHeaders2.setVia(response, response.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
+        HttpProxyHeaders.setVia(response, response.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
         HttpHeaders.setKeepAlive(response, keepAlive);
         return response;
     }
 
     private boolean getAndCleanProxyKeepAlive(HttpRequest request) {
-        String value = HttpHeaders.getHeader(request, HttpHeaders2.Proxy.CONNECTION, HttpHeaders.Values.KEEP_ALIVE).toLowerCase();
-        request.removeHeader(HttpHeaders2.Proxy.CONNECTION);
+        String value = HttpHeaders.getHeader(request, HttpProxyHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE).toLowerCase();
+        request.removeHeader(HttpProxyHeaders.Names.CONNECTION);
         return value.equals(HttpHeaders.Values.KEEP_ALIVE);
     }
 }

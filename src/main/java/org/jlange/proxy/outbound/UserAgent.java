@@ -24,7 +24,7 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.OutboundChannelPool.ChannelPipelineFactoryBuilder;
 import org.jlange.proxy.util.Config;
-import org.jlange.proxy.util.HttpHeaders2;
+import org.jlange.proxy.util.HttpProxyHeaders;
 import org.jlange.proxy.util.HttpResponseListener;
 import org.jlange.proxy.util.RemoteAddress;
 
@@ -74,7 +74,7 @@ public class UserAgent {
     private void updateProxyRequest(final HttpRequest request) throws MalformedURLException {
         request.setProtocolVersion(HttpVersion.HTTP_1_1);
         request.removeHeader(HttpHeaders.Names.CONNECTION);
-        request.setHeader(HttpHeaders2.Proxy.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+        request.setHeader(HttpProxyHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
 
         if (!request.getUri().toLowerCase().startsWith("http")) {
             RemoteAddress address = RemoteAddress.parseRequest(request);
