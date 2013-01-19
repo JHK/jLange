@@ -18,10 +18,11 @@ public class HeaderTest {
 
         assertEquals(null, HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
 
-        HttpProxyHeaders.setVia(request, HttpVersion.HTTP_1_1, "hostname", null);
+        HttpProxyHeaders.setVia(request, "hostname", null);
         assertEquals("1.1 hostname", HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
 
-        HttpProxyHeaders.setVia(request, HttpVersion.HTTP_1_0, "hostname2", "jLange");
+        request.setProtocolVersion(HttpVersion.HTTP_1_0);
+        HttpProxyHeaders.setVia(request, "hostname2", "jLange");
         assertEquals("1.1 hostname, 1.0 hostname2 (jLange)", HttpHeaders.getHeader(request, HttpHeaders.Names.VIA));
     }
 

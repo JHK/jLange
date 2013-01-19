@@ -13,14 +13,21 @@
  */
 package org.jlange.proxy.util;
 
+import java.net.SocketAddress;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
 public class HttpProxyHeaders {
 
+    private final static Pattern getIpFromAddress = Pattern.compile(".*?(\\d+(\\.\\d+){3}).*");
+
     public static final class Names {
-        public final static String CONNECTION = "Proxy-Connection";
+        public final static String CONNECTION      = "Proxy-Connection";
+        public final static String X_FORWARDED_FOR = "X-Forwarded-For";
     }
 
     /**
@@ -32,7 +39,8 @@ public class HttpProxyHeaders {
      * @param hostname a generic name or the IP of the proxy
      * @param comment may be null, for further information
      */
-    public static void setVia(HttpMessage message, HttpVersion version, String hostname, String comment) {
+    public static void setVia(HttpMessage message, String hostname, String comment) {
+        HttpVersion version = message.getProtocolVersion();
         String currentVia = HttpHeaders.getHeader(message, HttpHeaders.Names.VIA);
         String thisVia = version.getMajorVersion() + "." + version.getMinorVersion() + " " + hostname
                 + (comment == null ? "" : " (" + comment + ")");
@@ -44,5 +52,10 @@ public class HttpProxyHeaders {
             newVia = currentVia + ", " + thisVia;
 
         HttpHeaders.setHeader(message, HttpHeaders.Names.VIA, newVia);
+    }
+
+    public static void setForwardedFor(HttpMessage message, SocketAddress remoteAddress) {
+        Matcher m = getIpFromAddress.matcher(remoteAddress.toString());
+        HttpHeaders.setHeader(message, Names.X_FORWARDED_FOR, m.replaceAll("$1"));
     }
 }

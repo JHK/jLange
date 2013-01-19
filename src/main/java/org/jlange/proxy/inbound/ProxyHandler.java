@@ -42,7 +42,12 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
     @Override
     public void messageReceived(final ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         final RequestResponse requestResponse = (RequestResponse) e.getMessage();
-        final HttpRequest request = updateRequest(requestResponse.removeRequest());
+
+        // update request
+        final HttpRequest request = requestResponse.removeRequest();
+        updateRequestUri(request);
+        HttpProxyHeaders.setVia(request, Config.VIA_HOSTNAME, Config.VIA_COMMENT);
+        HttpProxyHeaders.setForwardedFor(request, ctx.getChannel().getRemoteAddress());
         final boolean keepAlive = getAndCleanProxyKeepAlive(request);
 
         ua.request(request, new HttpResponseListener() {
@@ -64,14 +69,12 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
         }
     }
 
-    private HttpRequest updateRequest(HttpRequest request) {
-        HttpProxyHeaders.setVia(request, request.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
-
-        /*
-         * {@link HttpRequest}s to proxies are made in a slightly different schema. The URI of the {@link HttpRequest} may be absolute, whereas
-         * the target server requires a relative one. So this function updates the {@link HttpRequest} in a way like the client would make the
-         * request to the targeted server directly.
-         */
+    /*
+     * {@link HttpRequest}s to proxies are made in a slightly different schema. The URI of the {@link HttpRequest} may be absolute, whereas
+     * the target server requires a relative one. So this function updates the {@link HttpRequest} in a way like the client would make the
+     * request to the targeted server directly.
+     */
+    private void updateRequestUri(HttpRequest request) {
         if (request.getUri().toLowerCase().startsWith("http")) {
             try {
                 final URL url = new URL(request.getUri());
@@ -90,14 +93,12 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
                 e.printStackTrace();
             }
         }
-
-        return request;
     }
 
     private HttpResponse updateResponse(HttpResponse response, boolean keepAlive) {
         response.setProtocolVersion(HttpVersion.HTTP_1_1);
         response.removeHeader(HttpHeaders.Names.TRANSFER_ENCODING);
-        HttpProxyHeaders.setVia(response, response.getProtocolVersion(), Config.VIA_HOSTNAME, Config.VIA_COMMENT);
+        HttpProxyHeaders.setVia(response, Config.VIA_HOSTNAME, Config.VIA_COMMENT);
         HttpHeaders.setKeepAlive(response, keepAlive);
         return response;
     }
