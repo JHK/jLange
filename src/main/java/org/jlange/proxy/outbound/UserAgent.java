@@ -21,14 +21,20 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.OutboundChannelPool.ChannelPipelineFactoryBuilder;
 import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpProxyHeaders;
-import org.jlange.proxy.util.HttpResponseListener;
 import org.jlange.proxy.util.RemoteAddress;
 
 public class UserAgent {
+
+    public interface HttpResponseListener {
+
+        public void responseReceived(final HttpResponse response);
+
+    }
 
     private RemoteAddress proxy;
 

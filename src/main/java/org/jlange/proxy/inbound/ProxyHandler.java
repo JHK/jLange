@@ -27,9 +27,9 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.UserAgent;
+import org.jlange.proxy.outbound.UserAgent.HttpResponseListener;
 import org.jlange.proxy.util.Config;
 import org.jlange.proxy.util.HttpProxyHeaders;
-import org.jlange.proxy.util.HttpResponseListener;
 
 public class ProxyHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
 
