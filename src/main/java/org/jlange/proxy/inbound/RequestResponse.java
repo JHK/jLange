@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.inbound;
 
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
@@ -24,6 +25,10 @@ interface RequestResponse {
 
     public void setResponse(HttpResponse response);
 
-    public HttpResponse getResponse();
+    public HttpResponse removeResponse();
+
+    public void addChunk(HttpChunk chunk);
+
+    public HttpChunk pollChunk();
 
 }

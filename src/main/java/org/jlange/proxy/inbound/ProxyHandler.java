@@ -22,6 +22,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -54,8 +55,13 @@ public class ProxyHandler extends SimpleChannelUpstreamHandler implements Channe
             @Override
             public void responseReceived(HttpResponse response) {
                 requestResponse.setResponse(updateResponse(response, keepAlive));
-                if (ctx.getChannel().isConnected())
-                    ctx.getChannel().write(requestResponse);
+                ctx.getChannel().write(requestResponse);
+            }
+
+            @Override
+            public void chunkReceived(HttpChunk chunk) {
+                requestResponse.addChunk(chunk);
+                ctx.getChannel().write(requestResponse);
             }
         });
     }

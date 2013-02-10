@@ -79,7 +79,8 @@ public class LogHandler extends SimpleChannelHandler {
 
     @Override
     public void channelInterestChanged(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
-        log.info("Channel {} - channelInterestChanged", getChannelId(ctx));
+        log.info("Channel {} - channelInterestChanged {}", getChannelId(ctx), new Object[] { e.getValue(), e.getState(),
+                e.getChannel().isReadable(), e.getChannel().isWritable() });
         super.channelInterestChanged(ctx, e);
     }
 

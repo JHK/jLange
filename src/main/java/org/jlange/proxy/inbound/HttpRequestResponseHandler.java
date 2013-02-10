@@ -14,20 +14,24 @@
 package org.jlange.proxy.inbound;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Queue;
 
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
 public class HttpRequestResponseHandler extends SimpleChannelHandler {
 
-    private int                        currentRequestId = 0;
-    private int                        maxRequestId     = 0;
-    private Map<Integer, HttpResponse> responseMap      = new HashMap<Integer, HttpResponse>();
+    private int                           currentRequestId = 0;
+    private int                           maxRequestId     = 0;
+    private Map<Integer, RequestResponse> responseMap      = new HashMap<Integer, RequestResponse>();
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
@@ -39,33 +43,60 @@ public class HttpRequestResponseHandler extends SimpleChannelHandler {
 
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        if (!(e.getMessage() instanceof RequestResponse)) {
+        if (e.getMessage() instanceof RequestResponse) {
+            HttpRequestResponse requestResponse = (HttpRequestResponse) e.getMessage();
+            synchronized (responseMap) {
+                responseMap.put(requestResponse.getRequestId(), requestResponse);
+                drainResponses(ctx.getChannel());
+            }
+        } else {
             super.writeRequested(ctx, e);
-            return;
         }
+    }
 
-        HttpRequestResponse requestResponse = (HttpRequestResponse) e.getMessage();
-        synchronized (responseMap) {
-            responseMap.put(requestResponse.getRequestId(), requestResponse.getResponse());
+    private void drainResponses(Channel channel) {
+        RequestResponse requestResponse = responseMap.get(currentRequestId);
 
-            HttpResponse response;
-            while ((response = responseMap.remove(currentRequestId)) != null) {
+        // the response is not available yet
+        if (requestResponse == null)
+            return;
+
+        HttpResponse response = requestResponse.removeResponse();
+        if (response != null) {
+            if (channel.isConnected())
+                channel.write(response);
+            if (!response.isChunked()) {
+                responseMap.remove(currentRequestId);
                 currentRequestId++;
-                if (ctx.getChannel().isConnected())
-                    ctx.getChannel().write(response);
+            }
+            drainResponses(channel);
+        }
+        // response is already sent
+        else {
+            HttpChunk chunk = requestResponse.pollChunk();
+            if (chunk != null) {
+                if (channel.isConnected())
+                    channel.write(chunk);
+                if (chunk.isLast()) {
+                    responseMap.remove(currentRequestId);
+                    currentRequestId++;
+                }
+                drainResponses(channel);
             }
         }
     }
 
     class HttpRequestResponse implements RequestResponse {
 
-        private int          requestId;
-        private HttpRequest  request;
-        private HttpResponse response;
+        private int              requestId;
+        private HttpRequest      request;
+        private HttpResponse     response;
+        private Queue<HttpChunk> chunks;
 
         public HttpRequestResponse(HttpRequest request, int requestId) {
             setRequest(request);
             this.requestId = requestId;
+            this.chunks = new LinkedList<HttpChunk>();
         }
 
         @Override
@@ -86,12 +117,24 @@ public class HttpRequestResponseHandler extends SimpleChannelHandler {
         }
 
         @Override
-        public HttpResponse getResponse() {
+        public HttpResponse removeResponse() {
+            HttpResponse response = this.response;
+            this.response = null;
             return response;
         }
 
         public int getRequestId() {
             return requestId;
+        }
+
+        @Override
+        public void addChunk(HttpChunk chunk) {
+            chunks.add(chunk);
+        }
+
+        @Override
+        public HttpChunk pollChunk() {
+            return chunks.poll();
         }
     }
 }

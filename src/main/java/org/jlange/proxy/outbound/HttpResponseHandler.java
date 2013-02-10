@@ -15,99 +15,90 @@ package org.jlange.proxy.outbound;
 
 import java.io.IOException;
 import java.net.ConnectException;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jlange.proxy.outbound.UserAgent.HttpResponseListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class HttpResponseHandler extends SimpleChannelUpstreamHandler implements ChannelHandler {
+public class HttpResponseHandler extends SimpleChannelUpstreamHandler {
 
-    private final Logger                log = LoggerFactory.getLogger(getClass());
-    private Queue<HttpResponseListener> httpResponseListenerQueue;
-
-    public HttpResponseHandler() {
-        httpResponseListenerQueue = new LinkedList<HttpResponseListener>();
-    }
+    private HttpResponseListener httpResponseListener;
+    private Boolean              isKeepAlive;
 
     public void setResponseListener(HttpResponseListener httpResponseListener) {
-        httpResponseListenerQueue.add(httpResponseListener);
+        this.httpResponseListener = httpResponseListener;
     }
 
-    public void sendRequest(final ChannelFuture future, final HttpRequest request) {
+    public void sendRequest(ChannelFuture future, final HttpRequest request) {
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(final ChannelFuture future) {
-                if (future.isSuccess()) {
-                    log.info("Channel {} - sending request - {}", future.getChannel().getId(), request.getUri());
-                    log.debug("Channel {} - {}", future.getChannel().getId(), request);
+                if (future.isSuccess())
                     future.getChannel().write(request);
-                } else {
-                    log.info("Channel {} - could not send request - {}", future.getChannel().getId(), request.getUri());
-                }
             }
         });
     }
 
     @Override
-    public void exceptionCaught(final ChannelHandlerContext ctx, final ExceptionEvent e) {
-        if (e.getCause() instanceof ConnectException) {
-            // connection timed out or remote closed keep-alive connection
-            if (httpResponseListenerQueue.isEmpty()) {
-                log.info("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-            } else {
-                log.warn("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-            }
-        } else if (e.getCause() instanceof IOException) {
-            // another way for remote closed keep-alive connection
-            log.info("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-        } else {
-            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getMessage());
-            log.error("Channel {} - {}", e.getChannel().getId(), e.getCause().getStackTrace());
-            e.getChannel().close();
-        }
-        final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
+    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
+        HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_GATEWAY);
         HttpHeaders.setContentLength(response, response.getContent().readableBytes());
-        while (!httpResponseListenerQueue.isEmpty())
-            httpResponseListenerQueue.remove().responseReceived(response);
+        if (httpResponseListener != null) {
+            httpResponseListener.responseReceived(response);
+            httpResponseListener = null;
+        }
+        ctx.getChannel().close();
+
+        // connection timed out or remote closed keep-alive connection
+        if (e.getCause() instanceof ConnectException)
+            return;
+        // another way for remote closed keep-alive connection
+        if (e.getCause() instanceof IOException)
+            return;
+
+        super.exceptionCaught(ctx, e);
     }
 
     @Override
-    public void channelClosed(final ChannelHandlerContext ctx, final ChannelStateEvent e) {
-        log.info("Channel {} - closed", e.getChannel().getId());
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        // return if there is no one to notify
+        if (httpResponseListener == null)
+            return;
+
+        if (e.getMessage() instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) e.getMessage();
+            isKeepAlive = HttpHeaders.isKeepAlive(response);
+            httpResponseListener.responseReceived(response);
+            if (!response.isChunked()) {
+                httpResponseListener = null;
+                finalizeChannelFuture(e.getFuture());
+            }
+        } else if (e.getMessage() instanceof HttpChunk) {
+            HttpChunk chunk = (HttpChunk) e.getMessage();
+            httpResponseListener.chunkReceived(chunk);
+            if (chunk.isLast()) {
+                httpResponseListener = null;
+                finalizeChannelFuture(e.getFuture());
+            }
+        } else
+            throw new IllegalStateException(e.getMessage().getClass().toString());
     }
 
-    @Override
-    public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) {
-        final HttpResponse response = (HttpResponse) e.getMessage();
-
-        log.info("Channel {} - response received - {}", e.getChannel().getId(), response.getStatus().toString());
-        log.debug(response.toString());
-
-        final Boolean isKeepAlive = HttpHeaders.isKeepAlive(response);
-
-        while (!httpResponseListenerQueue.isEmpty())
-            httpResponseListenerQueue.remove().responseReceived(response);
-
+    private void finalizeChannelFuture(ChannelFuture future) {
         if (isKeepAlive)
-            e.getFuture().addListener(OutboundChannelPool.IDLE);
+            future.addListener(OutboundChannelPool.IDLE);
         else
-            e.getFuture().addListener(ChannelFutureListener.CLOSE);
-
+            future.addListener(ChannelFutureListener.CLOSE);
     }
 }

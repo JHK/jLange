@@ -19,6 +19,7 @@ import java.net.URL;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -33,6 +34,8 @@ public class UserAgent {
     public interface HttpResponseListener {
 
         public void responseReceived(final HttpResponse response);
+
+        public void chunkReceived(final HttpChunk chunk);
 
     }
 
