@@ -28,6 +28,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelDownstreamHandler;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpRequestDecoder;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
@@ -159,6 +160,18 @@ public class SpdyPipelineFactory implements ChannelPipelineFactory {
             }
 
             super.messageReceived(ctx, e);
+        }
+
+    }
+
+    private class ThreadSafeWriteHandler extends SimpleChannelDownstreamHandler {
+
+        @Override
+        public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+            // HttpContentEncoder is not thread-safe
+            synchronized (ctx.getChannel()) {
+                super.writeRequested(ctx, e);
+            }
         }
 
     }
