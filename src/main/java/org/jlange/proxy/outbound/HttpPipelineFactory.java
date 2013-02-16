@@ -19,6 +19,8 @@ import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpContentDecompressor;
 import org.jboss.netty.handler.codec.http.HttpRequestEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
+import org.jlange.proxy.util.Config;
+import org.jlange.proxy.util.IdleShutdownHandler;
 
 public class HttpPipelineFactory implements ChannelPipelineFactory {
 
@@ -27,10 +29,9 @@ public class HttpPipelineFactory implements ChannelPipelineFactory {
 
         pipeline.addLast("encoder", new HttpRequestEncoder());
         pipeline.addLast("decoder", new HttpResponseDecoder(8192, 8192 * 2, 8192 * 2));
-//        pipeline.addLast("aggregator", new HttpChunkAggregator(Config.MAX_RESPONSE_SIZE));
         pipeline.addLast("inflater", new HttpContentDecompressor());
-//        pipeline.addLast("plugin", new PluginHandler());
-//        pipeline.addLast("idle", new IdleShutdownHandler(0, Config.OUTBOUND_TIMEOUT));
+        pipeline.addLast("plugin", new PluginHandler());
+        pipeline.addLast("idle", new IdleShutdownHandler(0, Config.OUTBOUND_TIMEOUT));
         pipeline.addLast("handler", new HttpResponseHandler());
 
         return pipeline;

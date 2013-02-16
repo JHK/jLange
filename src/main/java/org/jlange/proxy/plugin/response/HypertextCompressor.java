@@ -14,44 +14,32 @@
 package org.jlange.proxy.plugin.response;
 
 import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jlange.proxy.plugin.ResponsePlugin;
 import org.jlange.proxy.util.HttpContentHeaders;
-import org.mozilla.javascript.EvaluatorException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
-
 public class HypertextCompressor implements ResponsePlugin {
 
-    private final String[]       BAD_URIS = new String[] { "http://www.google.de/" };
+    private static final String[]           BAD_URIS         = new String[] { "http://www.google.de/" };
 
-    private final Logger         log      = LoggerFactory.getLogger(HypertextCompressor.class);
-    private final HtmlCompressor compressor;
+    private static final Logger             log              = LoggerFactory.getLogger(HypertextCompressor.class);
+    private static final HtmlCompressor     compressor       = new HtmlCompressor();
 
-    public HypertextCompressor() {
-        compressor = new HtmlCompressor();
-        compressor.setCompressCss(true);
-        compressor.setCompressJavaScript(true);
-        compressor.setRemoveComments(true);
-        compressor.setRemoveIntertagSpaces(false);
-        compressor.setRemoveScriptAttributes(true);
-        compressor.setSimpleBooleanAttributes(true);
-        compressor.setPreserveLineBreaks(true);
-
-        if (log.isDebugEnabled())
-            compressor.setGenerateStatistics(true);
-    }
+    private final Map<HttpRequest, Charset> contentEncodings = new HashMap<HttpRequest, Charset>();
 
     @Override
-    public Boolean isApplicable(final HttpRequest request) {
+    public Boolean isApplicable(HttpRequest request) {
         final String uri = "http://" + HttpHeaders.getHost(request) + request.getUri();
         for (String bad_uri : BAD_URIS)
             if (uri.equals(bad_uri)) {
@@ -63,7 +51,7 @@ public class HypertextCompressor implements ResponsePlugin {
     }
 
     @Override
-    public Boolean isApplicable(final HttpResponse response) {
+    public Boolean isApplicable(HttpResponse response) {
         if (!response.getStatus().equals(HttpResponseStatus.OK))
             return false;
 
@@ -74,16 +62,52 @@ public class HypertextCompressor implements ResponsePlugin {
     }
 
     @Override
-    public void run(final HttpRequest request, final HttpResponse response) {
-        final Charset encoding = HttpContentHeaders.getCharset(response);
+    public void run(HttpRequest request, HttpResponse response) {
+        Charset encoding = HttpContentHeaders.getCharset(response);
 
+        if (response.isChunked()) {
+            response.removeHeader(HttpHeaders.Names.CONTENT_LENGTH);
+            contentEncodings.put(request, encoding);
+        } else {
+            ChannelBuffer content = compress(encoding, response.getContent());
+            HttpHeaders.setContentLength(response, content.readableBytes());
+            response.setContent(content);
+        }
+    }
+
+    @Override
+    public void run(HttpRequest request, HttpChunk chunk) {
+        if (chunk.isLast()) {
+            contentEncodings.remove(request);
+        } else {
+            Charset encoding = contentEncodings.get(request);
+            chunk.setContent(compress(encoding, chunk.getContent()));
+        }
+    }
+
+    private static ChannelBuffer compress(Charset encoding, ChannelBuffer buffer) {
+        String content = "";
         try {
-            final String content = compressor.compress(response.getContent().toString(encoding));
+            content = buffer.toString(encoding);
+            Boolean startWithWhitespace = false;
+            Boolean endWithWhitespace = false;
+            if (content.startsWith(" ") || content.startsWith("\n"))
+                startWithWhitespace = true;
+            if (content.endsWith(" ") || content.endsWith("\n"))
+                endWithWhitespace = true;
 
-            ChannelBuffer buffer = ChannelBuffers.copiedBuffer(content, encoding);
-            HttpHeaders.setContentLength(response, buffer.readableBytes());
-            response.setContent(buffer);
-        } catch (EvaluatorException e) {
+            content = compressor.compress(content);
+
+            if (startWithWhitespace || endWithWhitespace) {
+                StringBuilder sb = new StringBuilder();
+                if (startWithWhitespace)
+                    sb.append(" ");
+                sb.append(content);
+                if (endWithWhitespace)
+                    sb.append(" ");
+                content = sb.toString();
+            }
+        } catch (Exception e) {
             log.error(e.getMessage());
         }
 
@@ -93,6 +117,23 @@ public class HypertextCompressor implements ResponsePlugin {
 
             log.debug(compressor.getStatistics().toString());
             log.info("saved " + (savedBytes < 1024 ? savedBytes + " Bytes" : savedBytes / 1024 + " KiB"));
+        }
+
+        return ChannelBuffers.copiedBuffer(content, encoding);
+    }
+
+    private static class HtmlCompressor extends com.googlecode.htmlcompressor.compressor.HtmlCompressor {
+        public HtmlCompressor() {
+            setCompressCss(true);
+            setCompressJavaScript(true);
+            setRemoveComments(true);
+            setRemoveIntertagSpaces(false);
+            setRemoveScriptAttributes(true);
+            setSimpleBooleanAttributes(true);
+            setPreserveLineBreaks(true);
+
+            if (log.isDebugEnabled())
+                setGenerateStatistics(true);
         }
     }
 }

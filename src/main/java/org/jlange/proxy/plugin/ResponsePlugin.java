@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.plugin;
 
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 
@@ -33,7 +34,7 @@ public interface ResponsePlugin {
      * @return is the plugin applicable
      */
     public Boolean isApplicable(final HttpResponse response);
-    
+
     /**
      * Run the main code of the plugin. The response will be updated in here. For read and changing responses content the code must be
      * marked as <code>synchronized</code>, because these plugins are intended to run in parallel.
@@ -42,4 +43,12 @@ public interface ResponsePlugin {
      * @param response matching {@link HttpResponse}
      */
     public void run(final HttpRequest request, final HttpResponse response);
+
+    /**
+     * Run the main code of the plugin for a given chunk.
+     * 
+     * @param request {@link HttpRequest}
+     * @param chunk {@link HttpChunk}
+     */
+    public void run(HttpRequest request, HttpChunk chunk);
 }

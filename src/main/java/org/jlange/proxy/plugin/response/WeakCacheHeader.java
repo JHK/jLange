@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.SimpleTimeZone;
 
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -59,6 +60,11 @@ public class WeakCacheHeader implements ResponsePlugin {
         if (response.getHeader(HttpHeaders.Names.LAST_MODIFIED) != null)
             return false;
 
+        if (response.isChunked()) {
+            log.info("Received content but could not apply plugin, because response is chunked!");
+            return false;
+        }
+        
         return true;
     }
 
@@ -101,6 +107,9 @@ public class WeakCacheHeader implements ResponsePlugin {
             responseCached(response);
         }
     }
+
+    @Override
+    public void run(HttpRequest request, HttpChunk chunk) {}
 
     private static String getUri(final HttpRequest request) {
         if (request.getUri().toLowerCase().startsWith("http"))

@@ -22,6 +22,7 @@ import java.io.OutputStream;
 
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -51,13 +52,22 @@ public class ImageCompressor implements ResponsePlugin {
         if (HttpHeaders.getHeader(response, HttpHeaders.Names.CACHE_CONTROL, "").contains(HttpHeaders.Values.NO_TRANSFORM))
             return false;
 
-        return HttpContentHeaders.isJPG(response) || HttpContentHeaders.isPNG(response);
+        if (!HttpContentHeaders.isJPG(response) && !HttpContentHeaders.isPNG(response))
+            return false;
+
+        if (response.isChunked()) {
+            log.info("Received image but could not apply plugin, because response is chunked!");
+            return false;
+        }
+
+        return true;
     }
 
     @Override
     public void run(final HttpRequest request, final HttpResponse response) {
         String uniqueName = String.valueOf(Thread.currentThread().getId());
-        ImageType type = HttpContentHeaders.isJPG(response) ? new JPG(uniqueName) : HttpContentHeaders.isPNG(response) ? new PNG(uniqueName) : null;
+        ImageType type = HttpContentHeaders.isJPG(response) ? new JPG(uniqueName)
+                : HttpContentHeaders.isPNG(response) ? new PNG(uniqueName) : null;
 
         try {
 
@@ -95,6 +105,9 @@ public class ImageCompressor implements ResponsePlugin {
             isEnabled = false;
         }
     }
+
+    @Override
+    public void run(HttpRequest request, HttpChunk chunk) {}
 
     private interface ImageType {
         public File getFile();

@@ -13,6 +13,7 @@
  */
 package org.jlange.proxy.plugin.response;
 
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -45,4 +46,7 @@ public class ResponseHeaderOptimizer implements ResponsePlugin {
             if (HttpHeaders.getHeader(response, header) != null)
                 response.removeHeader(header);
     }
+
+    @Override
+    public void run(HttpRequest request, HttpChunk chunk) {}
 }

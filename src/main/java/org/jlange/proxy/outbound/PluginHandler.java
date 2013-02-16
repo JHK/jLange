@@ -14,6 +14,7 @@
 package org.jlange.proxy.outbound;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +23,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jlange.proxy.plugin.PluginProvider;
@@ -45,16 +46,31 @@ public class PluginHandler extends SimpleChannelHandler {
 
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        HttpResponse response = (HttpResponse) e.getMessage();
-        log.debug("Channel {} - Response received", ctx.getChannel().getId());
+        if (e.getMessage() instanceof HttpResponse) {
+            HttpResponse response = (HttpResponse) e.getMessage();
 
-        // apply response plugins
-        for (ResponsePlugin plugin : responsePlugins) {
-            if (!plugin.isApplicable(response))
-                continue;
-            long start = System.currentTimeMillis();
-            plugin.run(request, response);
-            logStats(plugin, start);
+            // select applicable plugins
+            Iterator<ResponsePlugin> iter = responsePlugins.iterator();
+            while(iter.hasNext())
+                if (!iter.next().isApplicable(response))
+                    iter.remove();
+            
+            // apply response plugins
+            for (ResponsePlugin plugin : responsePlugins) {
+                long start = System.currentTimeMillis();
+                plugin.run(request, response);
+                logStats(plugin, start);
+            }
+        }
+        else if (e.getMessage() instanceof HttpChunk) {
+            HttpChunk chunk = (HttpChunk) e.getMessage();
+            
+            // apply response plugins
+            for (ResponsePlugin plugin : responsePlugins) {
+                long start = System.currentTimeMillis();
+                plugin.run(request, chunk);
+                logStats(plugin, start);
+            }
         }
 
         super.messageReceived(ctx, e);
@@ -63,7 +79,6 @@ public class PluginHandler extends SimpleChannelHandler {
     @Override
     public void writeRequested(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
         HttpRequest request = (HttpRequest) e.getMessage();
-        log.debug("Channel {} - Request received {}", ctx.getChannel().getId(), request.getHeader(HttpHeaders.Names.HOST) + request.getUri());
 
         // apply request to predefined response plugins
         HttpResponse response;
@@ -89,12 +104,8 @@ public class PluginHandler extends SimpleChannelHandler {
 
         // set response plugins
         for (ResponsePlugin plugin : PluginProvider.getInstance().getResponsePlugins())
-            if (plugin.isApplicable(request)) {
-                log.debug("Channel {} - Using plugin {}", ctx.getChannel().getId(), plugin.getClass().getName());
+            if (plugin.isApplicable(request))
                 responsePlugins.add(plugin);
-            } else {
-                log.debug("Channel {} - Not using plugin {}", ctx.getChannel().getId(), plugin.getClass().getName());
-            }
     }
 
     private void logStats(Object plugin, long start) {
