@@ -151,7 +151,7 @@ public class LogHandler extends SimpleChannelHandler {
     }
 
     private String getChannelId(ChannelHandlerContext ctx) {
-        return ctx.getChannel().getRemoteAddress().toString();
+        return ctx.getChannel().getRemoteAddress() != null ? ctx.getChannel().getRemoteAddress().toString() : "unconnected";
     }
 
     private Object getChannelMessage(MessageEvent e) {
