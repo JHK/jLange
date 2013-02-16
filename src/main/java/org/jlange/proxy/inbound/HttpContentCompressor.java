@@ -60,7 +60,9 @@ public class HttpContentCompressor extends org.jboss.netty.handler.codec.http.Ht
                 else {
                     ctx.sendDownstream(e);
                     // dirty hack: fake response to poll acceptEncoding from HttpContentEncoder
-                    super.writeRequested(fakeContext, fakeEvent);
+                    try {
+                        super.writeRequested(fakeContext, fakeEvent);
+                    } catch (IllegalStateException exception) {}
                 }
             }
         } else {
@@ -98,7 +100,8 @@ public class HttpContentCompressor extends org.jboss.netty.handler.codec.http.Ht
                                                                public Object getMessage() {
                                                                    HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
                                                                            HttpResponseStatus.OK);
-                                                                   response.setHeader(HttpHeaders.Names.CONTENT_ENCODING, HttpHeaders.Values.DEFLATE);
+                                                                   response.setHeader(HttpHeaders.Names.CONTENT_ENCODING,
+                                                                           HttpHeaders.Values.DEFLATE);
                                                                    return response;
                                                                }
                                                            };
